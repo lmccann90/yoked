@@ -2289,7 +2289,7 @@ function openWikiDetail(exId){
   const secondaryTags=(ex.secondary||[]).map(m=>`<span style="background:var(--surface2);color:var(--text-mid);border:1px solid var(--border);padding:3px 8px;border-radius:100px;font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">${m}</span>`).join('');
 
   const stepsHtml=(ex.steps||[]).map((s,i)=>`<div style="display:flex;gap:10px;margin-bottom:8px;"><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--accent);min-width:20px;">${i+1}</div><div style="font-size:13px;line-height:1.5;">${s}</div></div>`).join('');
-  const cuesHtml=(ex.cues||[]).map(c=>`<div style="display:flex;gap:8px;margin-bottom:6px;"><div style="color:#ff6b35;flex-shrink:0;">⚠</div><div style="font-size:13px;line-height:1.5;">${c}</div></div>`).join('');
+  const cuesHtml=(ex.cues||[]).map(c=>`<div style="display:flex;gap:8px;margin-bottom:6px;"><div style="color:#ff6b35;flex-shrink:0;">📌</div><div style="font-size:13px;line-height:1.5;">${c}</div></div>`).join('');
   const tipsHtml=(ex.tips||[]).map(t=>`<div style="display:flex;gap:8px;margin-bottom:6px;"><div style="color:var(--accent);flex-shrink:0;">💡</div><div style="font-size:13px;line-height:1.5;">${t}</div></div>`).join('');
 
   document.getElementById('wiki-detail-content').innerHTML=`
