@@ -7,8 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0d0d0d;--surface:#161616;--surface2:#1f1f1f;--surface3:#272727;
-  --border:#2a2a2a;--text:#f2f2f2;--text-dim:#555;--text-mid:#888;
+  --bg:#0a0a0a;--surface:#181818;--surface2:#222222;--surface3:#2c2c2c;
+  --border:#303030;--text:#f4f4f4;--text-dim:#585858;--text-mid:#909090;
   --accent:#c8ff00;--accent-dim:rgba(200,255,0,0.08);--accent-border:rgba(200,255,0,0.25);
   --danger:#ff4444;--radius:14px;--radius-sm:9px;--tab-h:68px;--header-h:56px;
 }
@@ -39,7 +39,7 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
 .page-title span{color:var(--accent);}
 
 /* CARDS */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:12px;}
+.card{background:var(--surface);border:1px solid #353535;border-radius:var(--radius);overflow:hidden;margin-bottom:12px;}
 .card-header{padding:12px 16px;background:var(--surface2);font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);display:flex;align-items:center;justify-content:space-between;}
 
 /* BEAST CARDS */
@@ -191,7 +191,7 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
 .btn{padding:12px 20px;border-radius:var(--radius-sm);border:none;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;}
 .btn-primary{background:var(--accent);color:#000;}
 .btn-primary:active{background:#b0e000;}
-.btn-secondary{background:var(--surface2);color:var(--text-mid);border:1px solid var(--border);}
+.btn-secondary{background:var(--surface3);color:var(--text-mid);border:1px solid #404040;}
 .btn-secondary:active{background:var(--surface3);}
 .btn-sm{padding:8px 14px;font-size:13px;min-height:36px;}
 .btn-full{width:100%;}
@@ -277,6 +277,24 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
 .empty{text-align:center;padding:48px 20px;color:var(--text-dim);}
 .empty-icon{font-size:48px;display:block;margin-bottom:12px;}
 .empty-text{font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:2px;text-transform:uppercase;}
+
+/* SET TILES */
+.set-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px 6px;}
+.set-tile{background:var(--surface3);border:2px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;transition:all 0.15s;position:relative;}
+.set-tile.selected{border-color:var(--accent);background:var(--accent-dim);}
+.set-tile.has-data{border-color:#3a3a3a;background:var(--surface2);}
+.set-tile:active{transform:scale(0.97);}
+.set-tile-num{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
+.set-tile-reps{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--text);line-height:1;}
+.set-tile-weight{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:1px;color:var(--accent);margin-top:2px;}
+.set-tile-empty{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:1px;color:var(--text-dim);}
+.set-tile-add{border-style:dashed;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text-dim);}
+.set-editor{padding:12px 14px;background:var(--surface2);border-top:1px solid var(--border);display:none;}
+.set-editor.visible{display:block;}
+.set-editor-title{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+.set-editor-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;}
+.set-editor-group{display:flex;flex-direction:column;gap:4px;}
+.set-editor-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);text-align:center;}
 </style>
 </head>
 <body>
@@ -647,6 +665,63 @@ function getTotalVol(d,uid){
 function getExOrder(d,uid,dayId){return(d.exOrder||{})[uid+'_'+dayId]||null;}
 function saveExOrder(uid,dayId,order){const d=load();if(!d.exOrder)d.exOrder={};d.exOrder[uid+'_'+dayId]=order;save(d);}
 
+
+// ═══════════════════════════════════════════════
+// AUTO-SAVE DRAFT
+// ═══════════════════════════════════════════════
+const DRAFT_KEY='yoked_draft';
+
+function autosaveDraft(){
+  if(!activeUser||!logDay)return;
+  const draft={
+    userId:activeUser,
+    dayId:logDay,
+    exercises:JSON.parse(JSON.stringify(logExercises)),
+    selectedTile:JSON.parse(JSON.stringify(selectedTile)),
+    date:document.getElementById('session-date')?.value||new Date().toISOString().split('T')[0],
+    notes:document.getElementById('session-notes')?.value||'',
+    bw:document.getElementById('bw-input')?.value||'',
+    ts:Date.now()
+  };
+  localStorage.setItem(DRAFT_KEY,JSON.stringify(draft));
+}
+
+function clearDraft(){
+  localStorage.removeItem(DRAFT_KEY);
+}
+
+function getDraft(){
+  const d=localStorage.getItem(DRAFT_KEY);
+  return d?JSON.parse(d):null;
+}
+
+function restoreDraftIfExists(){
+  const draft=getDraft();
+  if(!draft)return false;
+  // Only restore if within 24 hours
+  if(Date.now()-draft.ts>1000*60*60*24){clearDraft();return false;}
+  activeUser=draft.userId;
+  logDay=draft.dayId;
+  logExercises=draft.exercises;
+  selectedTile=draft.selectedTile||{};
+  // Restore UI state
+  renderLog();
+  // Restore field values after render
+  setTimeout(()=>{
+    const dateEl=document.getElementById('session-date');
+    const notesEl=document.getElementById('session-notes');
+    const bwEl=document.getElementById('bw-input');
+    if(dateEl)dateEl.value=draft.date;
+    if(notesEl)notesEl.value=draft.notes;
+    if(bwEl)bwEl.value=draft.bw;
+    // Re-select active tiles
+    Object.entries(selectedTile).forEach(([exName,i])=>{
+      if(i!==undefined)selectTile(exName,i);
+    });
+  },100);
+  return true;
+}
+
 // ═══════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════
@@ -863,7 +938,7 @@ function renderLogContent(){
       </div>`;
     }
 
-    html+=`<div class="bw-row"><span class="bw-label">⚖️ Bodyweight (optional)</span><input class="bw-input" id="bw-input" type="number" step="0.1" placeholder="60"><span class="bw-unit">kg</span></div>`;
+    html+=`<div class="bw-row"><span class="bw-label">⚖️ Bodyweight (optional)</span><input class="bw-input" id="bw-input" type="number" step="0.1" placeholder="60" oninput="autosaveDraft()"><span class="bw-unit">kg</span></div>`;
     html+=`<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;">Exercises</div>`;
 
     if(day.type==='skills'){
@@ -872,7 +947,7 @@ function renderLogContent(){
       html+=renderWeightsSection(day,d);
     }
 
-    html+=`<textarea class="notes-input" id="session-notes" placeholder="How did it feel? Anything to note? 💭"></textarea>`;
+    html+=`<textarea class="notes-input" id="session-notes" placeholder="How did it feel? Anything to note? 💭" oninput="autosaveDraft()"></textarea>`;
     html+=`<div class="save-row"><input type="date" class="date-input" id="session-date" value="${new Date().toISOString().split('T')[0]}"><button class="btn btn-primary" onclick="saveSession()">💾 Save Session</button></div>`;
   }
 
@@ -920,55 +995,137 @@ function renderWeightsSection(day,d){
 
 function renderExCard(exName,sets,prevSets,pb){
   const sid=safeId(exName);
-  const prevText=prevSets.length?`Last: ${prevSets.map(s=>`${s.reps||'?'} reps @ ${s.weight||'?'}kg`).join(', ')}`:'No previous data';
+  const prevText=prevSets.length?'Last: '+prevSets.map(s=>(s.reps||'?')+' @ '+(s.weight||'?')+'kg').join(', '):'No previous data';
   const maxW=Math.max(...sets.map(s=>parseFloat(s.weight)||0));
   const isPB=maxW>0&&(!pb||maxW>pb.weight);
-  const isCollapsed=cardCollapsed[exName]||false;
+  const isCollapsed=cardCollapsed[exName]!==false; // default collapsed
   return `<div class="ex-card" id="excard-${sid}" draggable="true" data-exname="${exName}">
     <div class="ex-card-header" onclick="toggleCollapse('${exName}')">
       <span class="drag-handle" onclick="event.stopPropagation()">⠿</span>
       <span class="collapse-icon ${isCollapsed?'':'open'}">▼</span>
-      <span class="ex-card-name">${exName}${isPB?` <span class="pb-tag">NEW PB!</span>`:''}</span>
+      <span class="ex-card-name">${exName}${isPB?' <span class="pb-tag">NEW PB!</span>':''}</span>
       <button class="btn btn-secondary btn-sm" style="padding:4px 8px;min-height:30px;" onclick="event.stopPropagation();removeExercise('${exName}')">✕</button>
     </div>
     <div class="ex-card-body" id="exbody-${sid}" style="max-height:${isCollapsed?'0':'600px'}">
       <div class="ex-prev">${prevText}</div>
-      <div class="set-labels"><div></div><div class="set-col-label">Reps</div><div class="set-col-label">Weight kg</div><div></div></div>
-      <div class="set-rows" id="setrows-${sid}">${sets.map((set,i)=>renderSetRow(exName,i,set)).join('')}</div>
-      <div class="ex-actions">
-        <button class="btn btn-secondary btn-sm" onclick="addSetRow('${exName}')">+ Set</button>
+      <div class="set-tiles" id="settiles-${sid}">
+        ${sets.map((set,i)=>renderSetTile(exName,i,set,false)).join('')}
+        <div class="set-tile set-tile-add" onclick="addSetRow('${exName}')">＋</div>
+      </div>
+      <div class="set-editor" id="seteditor-${sid}">
+        <div class="set-editor-title">
+          <span id="seteditor-label-${sid}">Edit Set</span>
+          <button class="remove-set-btn" id="seteditor-del-${sid}" onclick="">✕ Remove</button>
+        </div>
+        <div class="set-editor-row">
+          <div class="set-editor-group">
+            <div class="set-editor-label">Reps</div>
+            <div class="input-group">
+              <button class="pm-btn" onclick="tileAdjust('${exName}','reps',-1)">−</button>
+              <input class="num-input" type="number" inputmode="numeric" id="tile-reps-${sid}" placeholder="8" oninput="tileUpdate('${exName}','reps',this.value)">
+              <button class="pm-btn" onclick="tileAdjust('${exName}','reps',1)">+</button>
+            </div>
+          </div>
+          <div class="set-editor-group">
+            <div class="set-editor-label">Weight kg</div>
+            <div class="input-group weight-group">
+              <button class="pm-btn" onclick="tileAdjust('${exName}','weight',-0.5)">−</button>
+              <input class="num-input" type="number" inputmode="decimal" id="tile-weight-${sid}" placeholder="kg" step="0.5" oninput="tileUpdate('${exName}','weight',this.value)">
+              <button class="pm-btn" onclick="tileAdjust('${exName}','weight',0.5)">+</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>`;
 }
 
-function renderSetRow(exName,i,set){
-  const sid=safeId(exName);
-  return `<div class="set-row" id="setrow-${sid}-${i}">
-    <div class="set-num">S${i+1}</div>
-    <div class="input-group">
-      <button class="pm-btn" onclick="adjustVal('${exName}',${i},'reps',-1)">−</button>
-      <input class="num-input" type="number" inputmode="numeric" value="${set.reps||''}" placeholder="8" min="1" max="100" oninput="updateSet('${exName}',${i},'reps',this.value)">
-      <button class="pm-btn" onclick="adjustVal('${exName}',${i},'reps',1)">+</button>
-    </div>
-    <div class="input-group weight-group">
-      <button class="pm-btn" onclick="adjustVal('${exName}',${i},'weight',-0.5)">−</button>
-      <input class="num-input" type="number" inputmode="decimal" value="${set.weight||''}" placeholder="kg" step="0.5" oninput="updateSet('${exName}',${i},'weight',this.value);checkPB('${exName}')">
-      <button class="pm-btn" onclick="adjustVal('${exName}',${i},'weight',0.5)">+</button>
-    </div>
-    <button class="remove-set-btn" onclick="removeSet('${exName}',${i})">✕</button>
+function renderSetTile(exName,i,set,selected){
+  const hasData=!!(set.reps||set.weight);
+  return `<div class="set-tile ${selected?'selected':''} ${hasData?'has-data':''}" id="tile-${safeId(exName)}-${i}" onclick="selectTile('${exName}',${i})">
+    <div class="set-tile-num">Set ${i+1}</div>
+    ${hasData
+      ?`<div class="set-tile-reps">${set.reps||'—'}</div><div class="set-tile-weight">${set.weight?set.weight+'kg':'—'}</div>`
+      :`<div class="set-tile-empty">tap to edit</div>`
+    }
   </div>`;
 }
 
+let selectedTile={};
+
+function selectTile(exName,i){
+  const sid=safeId(exName);
+  selectedTile[exName]=i;
+  // Update tile highlights
+  const tilesEl=document.getElementById('settiles-'+sid);
+  if(tilesEl){
+    tilesEl.querySelectorAll('.set-tile:not(.set-tile-add)').forEach((el,idx)=>{
+      el.classList.toggle('selected',idx===i);
+    });
+  }
+  // Show editor
+  const editor=document.getElementById('seteditor-'+sid);
+  if(editor){
+    editor.classList.add('visible');
+    const set=logExercises[exName]?.[i]||{};
+    const repsEl=document.getElementById('tile-reps-'+sid);
+    const weightEl=document.getElementById('tile-weight-'+sid);
+    const labelEl=document.getElementById('seteditor-label-'+sid);
+    const delEl=document.getElementById('seteditor-del-'+sid);
+    if(repsEl)repsEl.value=set.reps||'';
+    if(weightEl)weightEl.value=set.weight||'';
+    if(labelEl)labelEl.textContent='Editing Set '+(i+1);
+    if(delEl)delEl.onclick=()=>removeSet(exName,i);
+  }
+}
+
+function tileUpdate(exName,field,value){
+  const i=selectedTile[exName];
+  if(i===undefined)return;
+  if(!logExercises[exName])return;
+  if(!logExercises[exName][i])logExercises[exName][i]={};
+  logExercises[exName][i][field]=value;
+  // Update the tile display
+  const sid=safeId(exName);
+  const tileEl=document.getElementById('tile-'+sid+'-'+i);
+  if(tileEl){
+    const set=logExercises[exName][i];
+    const hasData=!!(set.reps||set.weight);
+    tileEl.className='set-tile selected has-data';
+    tileEl.innerHTML=hasData
+      ?`<div class="set-tile-num">Set ${i+1}</div><div class="set-tile-reps">${set.reps||'—'}</div><div class="set-tile-weight">${set.weight?set.weight+'kg':'—'}</div>`
+      :`<div class="set-tile-num">Set ${i+1}</div><div class="set-tile-empty">tap to edit</div>`;
+    tileEl.onclick=()=>selectTile(exName,i);
+  }
+  autosaveDraft();
+  if(field==='weight')checkPB(exName);
+}
+
+function tileAdjust(exName,field,delta){
+  const i=selectedTile[exName];
+  if(i===undefined)return;
+  if(!logExercises[exName]||!logExercises[exName][i])return;
+  const cur=parseFloat(logExercises[exName][i][field])||0;
+  const newVal=field==='weight'?Math.max(0,+(cur+delta).toFixed(1)):Math.max(0,Math.round(cur+delta));
+  logExercises[exName][i][field]=String(newVal);
+  const sid=safeId(exName);
+  const el=document.getElementById(field==='weight'?'tile-weight-'+sid:'tile-reps-'+sid);
+  if(el)el.value=newVal;
+  tileUpdate(exName,field,String(newVal));
+}
+
 function toggleCollapse(exName){
-  cardCollapsed[exName]=!cardCollapsed[exName];
+  // Toggle: if undefined (default collapsed), set to expanded
+  cardCollapsed[exName]=cardCollapsed[exName]===false?true:false;
   const sid=safeId(exName);
   const body=document.getElementById('exbody-'+sid);
-  const icon=document.querySelector(`#excard-${sid} .collapse-icon`);
+  const icon=document.querySelector('#excard-'+sid+' .collapse-icon');
   if(!body)return;
-  if(cardCollapsed[exName]){body.style.maxHeight='0';if(icon)icon.classList.remove('open');}
+  const collapsed=cardCollapsed[exName]!==false;
+  if(collapsed){body.style.maxHeight='0';if(icon)icon.classList.remove('open');}
   else{body.style.maxHeight='600px';if(icon)icon.classList.add('open');}
 }
+
 
 function renderSkillSection(day,d){
   const prevSessions=getUserSessions(d,activeUser).filter(s=>s.dayId===logDay);
@@ -1042,18 +1199,43 @@ function updateSet(exName,i,field,value){
 function addSetRow(exName){
   if(!logExercises[exName])logExercises[exName]=[];
   const last=logExercises[exName][logExercises[exName].length-1]||{};
+  const newIdx=logExercises[exName].length;
   logExercises[exName].push({reps:last.reps||'',weight:last.weight||''});
+  // Re-render tiles
   const sid=safeId(exName);
-  const rowContainer=document.getElementById('setrows-'+sid);
-  if(rowContainer)rowContainer.innerHTML=logExercises[exName].map((set,i)=>renderSetRow(exName,i,set)).join('');
+  const tilesEl=document.getElementById('settiles-'+sid);
+  if(tilesEl){
+    const addBtn=tilesEl.querySelector('.set-tile-add');
+    const newTile=document.createElement('div');
+    newTile.innerHTML=renderSetTile(exName,newIdx,logExercises[exName][newIdx],false);
+    tilesEl.insertBefore(newTile.firstChild,addBtn);
+  }
+  selectTile(exName,newIdx);
+  autosaveDraft();
 }
 
 function removeSet(exName,i){
   if(!logExercises[exName]||logExercises[exName].length<=1)return;
   logExercises[exName].splice(i,1);
+  delete selectedTile[exName];
+  // Re-render the whole card tiles
   const sid=safeId(exName);
-  const rowContainer=document.getElementById('setrows-'+sid);
-  if(rowContainer)rowContainer.innerHTML=logExercises[exName].map((set,idx)=>renderSetRow(exName,idx,set)).join('');
+  const tilesEl=document.getElementById('settiles-'+sid);
+  if(tilesEl){
+    const addBtn=tilesEl.querySelector('.set-tile-add');
+    // Remove all tile divs
+    tilesEl.querySelectorAll('.set-tile:not(.set-tile-add)').forEach(el=>el.remove());
+    // Re-add them
+    logExercises[exName].forEach((set,idx)=>{
+      const div=document.createElement('div');
+      div.innerHTML=renderSetTile(exName,idx,set,false);
+      tilesEl.insertBefore(div.firstChild,addBtn);
+    });
+  }
+  // Hide editor
+  const editor=document.getElementById('seteditor-'+sid);
+  if(editor)editor.classList.remove('visible');
+  autosaveDraft();
 }
 
 function removeExercise(exName){
@@ -1064,6 +1246,8 @@ function removeExercise(exName){
 }
 
 function addAdHoc(){
+  // Dismiss keyboard first, then add
+  dismissKeyboard();
   const input=document.getElementById('adhoc-input');
   const name=(input?.value||'').trim();
   if(!name)return;
@@ -1081,6 +1265,7 @@ function addAdHoc(){
     }
   }
   updateExOrder();
+  autosaveDraft();
 }
 
 function addSkillAdhoc(){
@@ -1107,7 +1292,8 @@ function repeatPrevious(){
 }
 
 function selectDay(dayId){
-  logDay=dayId;logExercises={};cardCollapsed={};
+  logDay=dayId;logExercises={};cardCollapsed={};selectedTile={};
+  clearDraft();
   renderLogContent();
   setTimeout(()=>{
     const el=document.querySelector('.last-sesh-banner')||document.querySelector('.bw-row');
@@ -1171,10 +1357,11 @@ function saveSession(){
   clearNextDayOverride(activeUser);
   save(d);
 
-  if(newPBs.length)showToast(`🏆 ${newPBs.length} new PB${newPBs.length>1?'s':''}! ${newPBs.map(p=>p.exercise).join(', ')}`);
+  if(newPBs.length)showToast('🏆 '+newPBs.length+' new PB'+(newPBs.length>1?'s':'')+'! '+newPBs.map(p=>p.exercise).join(', '));
   else showToast('✅ Session saved!');
 
-  logDay=null;logExercises={};cardCollapsed={};
+  clearDraft();
+  logDay=null;logExercises={};cardCollapsed={};selectedTile={};
   renderLogContent();
 }
 
@@ -1904,7 +2091,18 @@ function showToast(msg){
     d.sessions=[{"id": "seed_pull_apr30", "userId": "lauren", "dayId": "pull", "date": "2026-04-30", "notes": "", "bodyweight": null, "exercises": [{"name": "Lat Pulldowns", "sets": [{"reps": 10, "weight": 35}, {"reps": 10, "weight": 35}, {"reps": 6, "weight": 40}]}, {"name": "Bicep Curls", "sets": [{"reps": 10, "weight": 15}, {"reps": 8, "weight": 17.5}, {"reps": 8, "weight": 17.5}]}, {"name": "Cable Rows", "sets": [{"reps": 10, "weight": 35}, {"reps": 9, "weight": 35}]}, {"name": "Face Pulls", "sets": [{"reps": 8, "weight": 35}, {"reps": 8, "weight": 35}, {"reps": 8, "weight": 35}, {"reps": 8, "weight": 40}]}, {"name": "Bent Over Rows", "sets": [{"reps": 10, "weight": 20}, {"reps": 10, "weight": 20}, {"reps": 10, "weight": 20}]}, {"name": "Scapular Pull Ups", "sets": [{"reps": 10, "weight": null}, {"reps": 10, "weight": null}, {"reps": 10, "weight": null}]}], "skills": [], "newPBs": [{"exercise": "Lat Pulldowns", "weight": 40}, {"exercise": "Bicep Curls", "weight": 17.5}, {"exercise": "Cable Rows", "weight": 35}, {"exercise": "Face Pulls", "weight": 40}, {"exercise": "Bent Over Rows", "weight": 20}]}, {"id": "seed_quads_apr28", "userId": "lauren", "dayId": "quads", "date": "2026-04-28", "notes": "", "bodyweight": null, "exercises": [{"name": "Squats", "sets": [{"reps": 10, "weight": 40}, {"reps": 10, "weight": 50}, {"reps": 10, "weight": 50}]}, {"name": "Leg Press", "sets": [{"reps": 8, "weight": 50}, {"reps": 8, "weight": 50}, {"reps": 8, "weight": 50}]}, {"name": "Leg Extensions", "sets": [{"reps": 10, "weight": 40}, {"reps": 8, "weight": 45}, {"reps": 8, "weight": 50}]}, {"name": "Goblet Squats", "sets": [{"reps": 12, "weight": 20}, {"reps": 12, "weight": 20}, {"reps": 12, "weight": 20}]}, {"name": "Bulgarian Split Squats", "sets": [{"reps": 10, "weight": 25}, {"reps": 10, "weight": 25}, {"reps": 10, "weight": 25}]}, {"name": "Walking Lunges", "sets": [{"reps": 24, "weight": null}, {"reps": 24, "weight": null}, {"reps": 24, "weight": null}]}, {"name": "Calf Raises", "sets": [{"reps": 20, "weight": null}, {"reps": 20, "weight": null}, {"reps": 20, "weight": null}]}], "skills": [], "newPBs": [{"exercise": "Squats", "weight": 50}, {"exercise": "Leg Press", "weight": 50}, {"exercise": "Leg Extensions", "weight": 50}, {"exercise": "Goblet Squats", "weight": 20}, {"exercise": "Bulgarian Split Squats", "weight": 25}]}, {"id": "seed_push_apr26", "userId": "lauren", "dayId": "push", "date": "2026-04-26", "notes": "", "bodyweight": null, "exercises": [{"name": "Bench Press", "sets": [{"reps": 8, "weight": 25}, {"reps": 8, "weight": 25}, {"reps": 8, "weight": 25}]}, {"name": "Overhead Press", "sets": [{"reps": 8, "weight": 15}, {"reps": 8, "weight": 15}, {"reps": 8, "weight": 15}]}, {"name": "Incline Dumbbell Press", "sets": [{"reps": 8, "weight": 8}, {"reps": 8, "weight": 8}, {"reps": 8, "weight": 8}]}, {"name": "Lateral Raises", "sets": [{"reps": 8, "weight": 5}, {"reps": 8, "weight": 5}, {"reps": 8, "weight": 5}]}, {"name": "Tricep Pushdowns", "sets": [{"reps": 8, "weight": 35}, {"reps": 8, "weight": 35}, {"reps": 8, "weight": 35}]}, {"name": "Chest Press", "sets": [{"reps": 8, "weight": 10}, {"reps": 8, "weight": 10}, {"reps": 8, "weight": 15}, {"reps": 8, "weight": 14}]}, {"name": "Rear Delt Flies", "sets": [{"reps": 8, "weight": 5}, {"reps": 8, "weight": 5}, {"reps": 8, "weight": 5}]}], "skills": [], "newPBs": [{"exercise": "Bench Press", "weight": 25}, {"exercise": "Overhead Press", "weight": 15}, {"exercise": "Incline Dumbbell Press", "weight": 8}, {"exercise": "Lateral Raises", "weight": 5}, {"exercise": "Tricep Pushdowns", "weight": 35}, {"exercise": "Chest Press", "weight": 15}, {"exercise": "Rear Delt Flies", "weight": 5}]}, {"id": "seed_glutes_apr25", "userId": "lauren", "dayId": "glutes", "date": "2026-04-25", "notes": "", "bodyweight": null, "exercises": [{"name": "Hip Thrusts", "sets": [{"reps": 6, "weight": 50}, {"reps": 6, "weight": 50}, {"reps": 8, "weight": 60}]}, {"name": "RDLs", "sets": [{"reps": 10, "weight": 40}, {"reps": 8, "weight": 45}, {"reps": 8, "weight": 45}]}, {"name": "Hamstring Curls", "sets": [{"reps": 8, "weight": 30}, {"reps": 8, "weight": 35}, {"reps": 8, "weight": 35}]}, {"name": "Glute Kickbacks", "sets": [{"reps": 10, "weight": 10}, {"reps": 10, "weight": 15}, {"reps": 10, "weight": 20}]}, {"name": "Hack Squats", "sets": [{"reps": 8, "weight": 50}, {"reps": 8, "weight": 60}, {"reps": 8, "weight": 60}]}, {"name": "Bulgarian Split Squats", "sets": [{"reps": 10, "weight": 20}, {"reps": 10, "weight": 20}, {"reps": 10, "weight": 20}]}, {"name": "Leg Press", "sets": [{"reps": 10, "weight": 50}, {"reps": 10, "weight": 50}, {"reps": 10, "weight": 50}]}], "skills": [], "newPBs": [{"exercise": "Hip Thrusts", "weight": 60}, {"exercise": "Hamstring Curls", "weight": 35}, {"exercise": "Glute Kickbacks", "weight": 20}, {"exercise": "Hack Squats", "weight": 60}]}];
     save(d);
   }
-  renderHome();
+  // Restore any in-progress session
+  const hadDraft=restoreDraftIfExists();
+  if(hadDraft){
+    // Switch to log tab
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('page-log').classList.add('active');
+    document.querySelectorAll('.tab-btn')[1].classList.add('active');
+    showToast('📋 Session restored!');
+  } else {
+    renderHome();
+  }
 })();
 </script>
 </body>
