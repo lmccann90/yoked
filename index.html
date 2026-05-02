@@ -455,11 +455,11 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
     <canvas id="snake-canvas" style="width:100%;border-radius:8px;background:#0a0a0a;display:block;touch-action:none;"></canvas>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;">
       <div></div>
-      <button class="btn btn-secondary" style="min-height:52px;font-size:22px;" ontouchstart="snakeDir('up')" onclick="snakeDir('up')">▲</button>
+      <button class="btn btn-secondary" style="min-height:52px;font-size:22px;touch-action:manipulation;" onclick="snakeDir('up')">▲</button>
       <div></div>
-      <button class="btn btn-secondary" style="min-height:52px;font-size:22px;" ontouchstart="snakeDir('left')" onclick="snakeDir('left')">◀</button>
-      <button class="btn btn-secondary" style="min-height:52px;font-size:22px;" ontouchstart="snakeDir('down')" onclick="snakeDir('down')">▼</button>
-      <button class="btn btn-secondary" style="min-height:52px;font-size:22px;" ontouchstart="snakeDir('right')" onclick="snakeDir('right')">▶</button>
+      <button class="btn btn-secondary" style="min-height:52px;font-size:22px;touch-action:manipulation;" onclick="snakeDir('left')">◀</button>
+      <button class="btn btn-secondary" style="min-height:52px;font-size:22px;touch-action:manipulation;" onclick="snakeDir('down')">▼</button>
+      <button class="btn btn-secondary" style="min-height:52px;font-size:22px;touch-action:manipulation;" onclick="snakeDir('right')">▶</button>
     </div>
     <div style="height:8px;"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -2663,6 +2663,7 @@ function closeFacts(){
 // SNAKE GAME
 // ═══════════════════════════════════════════════
 let snakeGame=null;
+let nextDir={x:1,y:0};
 
 function initSnake(){
   const canvas=document.getElementById('snake-canvas');
@@ -2707,7 +2708,7 @@ function startSnake(){
   
   let snake=[{x:Math.floor(COLS/2),y:Math.floor(ROWS/2)}];
   let dir={x:1,y:0};
-  let nextDir={x:1,y:0};
+  nextDir={x:1,y:0};
   let food=randomFood(snake,COLS,ROWS);
   let score=0;
   let alive=true;
@@ -2800,10 +2801,11 @@ function stopSnake(){
 }
 
 function snakeDir(d){
-  if(d==='up'&&snakeGame)nextDir={x:0,y:-1};
-  else if(d==='down'&&snakeGame)nextDir={x:0,y:1};
-  else if(d==='left'&&snakeGame)nextDir={x:-1,y:0};
-  else if(d==='right'&&snakeGame)nextDir={x:1,y:0};
+  const map={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
+  if(!snakeGame)return;
+  const nd=map[d];
+  // Prevent reversing direction
+  if(nextDir.x!==-nd.x||nextDir.y!==-nd.y) nextDir=nd;
 }
 
 function closeSnake(){
@@ -2859,6 +2861,35 @@ function closeSnake(){
   } else {
     renderHome();
   }
+
+  // ── MIGRATION: update existing data without wiping it ──────────────────
+  (function migrate(){
+    const d=load();
+    let changed=false;
+    const cathal=d.users.find(u=>u.id==='cathal');
+    if(cathal){
+      const pushDay=cathal.days&&cathal.days.find(dy=>dy.id==='push');
+      if(pushDay&&(!pushDay.exercises||!pushDay.exercises.includes('Skull Crushers'))){
+        pushDay.exercises=['Skull Crushers','Close Grip Bench Press','Tricep Pushdowns','Overhead Tricep Extension','Landmine Press','Lateral Raises','Rear Delt Flies','Incline Dumbbell Press','Dips'];
+        changed=true;
+      }
+      const pullDay=cathal.days&&cathal.days.find(dy=>dy.id==='pull');
+      if(pullDay&&(!pullDay.exercises||!pullDay.exercises.includes('Face Pulls'))){
+        pullDay.exercises=['Bent Over Rows','Pull Ups','Single Arm Dumbbell Row','Lat Pulldowns','Bicep Curls','Hammer Curls','Face Pulls','Back Extensions'];
+        changed=true;
+      }
+      const quadsDay=cathal.days&&cathal.days.find(dy=>dy.id==='quads');
+      if(quadsDay&&(!quadsDay.exercises||!quadsDay.exercises.includes('Single Leg RDL'))){
+        quadsDay.exercises=['Hack Squats','Hamstring Curls','Single Leg RDL','Bulgarian Split Squats','Single Leg Extension','Walking Lunges','Calf Raises'];
+        changed=true;
+      }
+    }
+    const cathalSessionData=[{"id": "cathal_push_apr25", "userId": "cathal", "dayId": "push", "date": "2026-04-25", "notes": "", "bodyweight": null, "exercises": [{"name": "Skull Crushers", "sets": [{"reps": 10, "weight": 20}, {"reps": 8, "weight": 25}, {"reps": 8, "weight": 25}]}, {"name": "Tricep Pushdowns", "sets": [{"reps": 8, "weight": 50}, {"reps": 8, "weight": 45}, {"reps": 8, "weight": 40}]}, {"name": "Close Grip Bench Press", "sets": [{"reps": 12, "weight": 40}, {"reps": 8, "weight": 50}, {"reps": 6, "weight": 50}]}, {"name": "Landmine Press", "sets": [{"reps": 8, "weight": 15}, {"reps": 6, "weight": 20}, {"reps": 5, "weight": 20}]}, {"name": "Lateral Raises", "sets": [{"reps": 8, "weight": 15}, {"reps": 8, "weight": 15}, {"reps": 6, "weight": 20}]}, {"name": "Rear Delt Flies", "sets": [{"reps": 10, "weight": 10}, {"reps": 10, "weight": 10}, {"reps": 10, "weight": 10}]}, {"name": "Incline Dumbbell Press", "sets": [{"reps": 10, "weight": 15}, {"reps": 8, "weight": 25}, {"reps": 8, "weight": 27.5}, {"reps": 5, "weight": 30}]}, {"name": "Dips", "sets": [{"reps": 8, "weight": null}, {"reps": 8, "weight": null}, {"reps": 6, "weight": null}]}], "skills": [], "newPBs": [{"exercise": "Skull Crushers", "weight": 25}, {"exercise": "Close Grip Bench Press", "weight": 50}, {"exercise": "Landmine Press", "weight": 20}, {"exercise": "Lateral Raises", "weight": 20}, {"exercise": "Incline Dumbbell Press", "weight": 30}]}, {"id": "cathal_pull_apr27", "userId": "cathal", "dayId": "pull", "date": "2026-04-27", "notes": "", "bodyweight": null, "exercises": [{"name": "Bent Over Rows", "sets": [{"reps": 8, "weight": 30}, {"reps": 8, "weight": 50}, {"reps": 6, "weight": 70}, {"reps": 6, "weight": 70}]}, {"name": "Back Extensions", "sets": [{"reps": 8, "weight": 10}, {"reps": 8, "weight": 15}, {"reps": 6, "weight": 20}]}, {"name": "Hammer Curls", "sets": [{"reps": 8, "weight": 12.5}, {"reps": 8, "weight": 15}, {"reps": 8, "weight": 15}]}, {"name": "Pull Ups", "sets": [{"reps": 8, "weight": null}, {"reps": 8, "weight": null}, {"reps": 6, "weight": null}]}, {"name": "Single Arm Dumbbell Row", "sets": [{"reps": 8, "weight": 20}, {"reps": 8, "weight": 25}, {"reps": 6, "weight": 30}]}, {"name": "Bicep Curls", "sets": [{"reps": 8, "weight": 12.5}, {"reps": 8, "weight": 12.5}, {"reps": 8, "weight": 12.5}]}, {"name": "Face Pulls", "sets": [{"reps": 8, "weight": 45}, {"reps": 8, "weight": 45}, {"reps": 8, "weight": 45}]}], "skills": [], "newPBs": [{"exercise": "Bent Over Rows", "weight": 70}, {"exercise": "Face Pulls", "weight": 45}, {"exercise": "Single Arm Dumbbell Row", "weight": 30}]}, {"id": "cathal_legs_may02", "userId": "cathal", "dayId": "quads", "date": "2026-05-02", "notes": "Single leg day", "bodyweight": null, "exercises": [{"name": "Hamstring Curls", "sets": [{"reps": 8, "weight": 25}, {"reps": 8, "weight": 30}, {"reps": 6, "weight": 35}]}, {"name": "Hack Squats", "sets": [{"reps": 8, "weight": 50}, {"reps": 8, "weight": 80}, {"reps": 8, "weight": 120}, {"reps": 6, "weight": 150}]}, {"name": "Single Leg RDL", "sets": [{"reps": 6, "weight": 25}, {"reps": 6, "weight": 30}, {"reps": 5, "weight": 35}]}, {"name": "Bulgarian Split Squats", "sets": [{"reps": 8, "weight": 30}, {"reps": 6, "weight": 40}, {"reps": 6, "weight": 40}]}, {"name": "Single Leg Extension", "sets": [{"reps": 8, "weight": 30}, {"reps": 8, "weight": 35}, {"reps": 6, "weight": 40}]}, {"name": "Walking Lunges", "sets": [{"reps": 24, "weight": null}, {"reps": 24, "weight": null}, {"reps": 24, "weight": null}]}], "skills": [], "newPBs": [{"exercise": "Hack Squats", "weight": 150}, {"exercise": "Single Leg RDL", "weight": 35}, {"exercise": "Single Leg Extension", "weight": 40}]}];
+    cathalSessionData.forEach(s=>{
+      if(!d.sessions.find(x=>x.id===s.id)){d.sessions.push(s);changed=true;}
+    });
+    if(changed){save(d);console.log('Migration done!');}
+  })();
 })();
 </script>
 
