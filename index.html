@@ -1332,6 +1332,13 @@ function repeatPrevious(){
 }
 
 function selectDay(dayId){
+  if(logDay===dayId){
+    // Tap again to deselect
+    logDay=null;logExercises={};cardCollapsed={};selectedTile={};
+    clearDraft();
+    renderLogContent();
+    return;
+  }
   logDay=dayId;logExercises={};cardCollapsed={};selectedTile={};
   clearDraft();
   renderLogContent();
