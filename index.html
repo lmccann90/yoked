@@ -146,12 +146,12 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
 .set-rows{padding:4px 14px 10px;display:flex;flex-direction:column;gap:8px;}
 .set-row{display:grid;grid-template-columns:28px 1fr 1fr 28px;gap:8px;align-items:center;}
 .set-num{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--text-dim);letter-spacing:1px;text-align:center;}
-.input-group{display:flex;align-items:center;background:#0a0a0a;border:2px solid #3a3a3a;border-radius:var(--radius-sm);overflow:hidden;min-width:0;}
+.input-group{display:flex;align-items:center;background:#0a0a0a;border:2px solid #3a3a3a;border-radius:var(--radius-sm);overflow:hidden;min-width:0;touch-action:manipulation;}
 .input-group.weight-group{border-color:#c8ff0044;background:#0d110a;}
 .input-group:focus-within{border-color:var(--accent) !important;}
 .pm-btn{width:30px;height:42px;background:none;border:none;color:var(--text-mid);font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;touch-action:manipulation;}
 .pm-btn:active{background:var(--surface3);color:var(--text);}
-.num-input{flex:1;background:none;border:none;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:0;text-align:center;padding:0;min-width:0;width:0;height:42px;-moz-appearance:textfield;}
+.num-input{flex:1;background:none;border:none;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:0;text-align:center;padding:0;min-width:0;width:0;height:42px;-moz-appearance:textfield;touch-action:manipulation;}
 .num-input:focus{outline:none;color:var(--accent);}
 .num-input::-webkit-inner-spin-button,.num-input::-webkit-outer-spin-button{-webkit-appearance:none;}
 .remove-set-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;width:28px;height:42px;display:flex;align-items:center;justify-content:center;}
@@ -664,8 +664,28 @@ async function loadFromSheets(){
     if(json.ok&&json.value){
       const sheetsData=JSON.parse(json.value);
       const localData=load();
-      const merged=sheetsData.users?.length?sheetsData:localData;
+      // Always keep whichever has more sessions — never let Sheets overwrite more data
+      const sheetsSessions=(sheetsData.sessions||[]).length;
+      const localSessions=(localData.sessions||[]).length;
+      let merged;
+      if(sheetsSessions>localSessions){
+        // Sheets has more — merge local sessions into sheets data
+        merged=sheetsData;
+        localData.sessions.forEach(s=>{
+          if(!merged.sessions.find(x=>x.id===s.id))merged.sessions.push(s);
+        });
+      } else {
+        // Local has same or more — merge sheets sessions into local data
+        merged=localData;
+        (sheetsData.sessions||[]).forEach(s=>{
+          if(!merged.sessions.find(x=>x.id===s.id))merged.sessions.push(s);
+        });
+        // But take user profiles from sheets if they exist (newer edits)
+        if(sheetsData.users?.length)merged.users=sheetsData.users;
+      }
       localStorage.setItem(CACHE_KEY,JSON.stringify(merged));
+      // Push merged data back to sheets so both are in sync
+      syncToSheets(merged);
       showSyncStatus('✅ Synced');
       setTimeout(()=>showSyncStatus(''),2000);
       return merged;
@@ -831,19 +851,32 @@ function save(d){
 // ═══════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════
-function showTab(tab,btn){
+function showTab(tab,btn,pushHistory=true){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+tab).classList.add('active');
-  btn.classList.add('active');
+  if(btn)btn.classList.add('active');
+  else{const idx={home:0,log:1,progress:2,history:3,beasts:4}[tab];if(idx!==undefined)document.querySelectorAll('.tab-btn')[idx]?.classList.add('active');}
   document.getElementById('main-scroll').scrollTop=0;
   dismissKeyboard();
+  if(pushHistory)history.pushState({tab},'','/');
   if(tab==='home')renderHome();
   if(tab==='log')renderLog();
   if(tab==='progress')renderProgress();
   if(tab==='history')renderHistory();
   if(tab==='beasts')renderBeasts();
 }
+
+// Handle browser back button
+window.addEventListener('popstate',e=>{
+  // Close any open modals first
+  const modals=['wiki-modal','wiki-detail-modal','achievement-modal','edit-modal','next-day-modal','timer-modal','snake-modal','facts-modal','custom-ex-modal','emoji-modal','edit-session-modal','template-modal'];
+  const openModal=modals.find(id=>!document.getElementById(id)?.classList.contains('hidden'));
+  if(openModal){document.getElementById(openModal).classList.add('hidden');history.pushState(e.state,'','/');return;}
+  // Navigate to previous tab
+  const tab=e.state?.tab||'home';
+  showTab(tab,null,false);
+});
 
 function dismissKeyboard(){
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
@@ -887,6 +920,7 @@ function renderHome(){
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
           <div class="beast-next" style="cursor:pointer;${isOverride?'border:1px solid var(--accent);color:var(--accent);':''}" onclick="event.stopPropagation();openNextDayPicker('${u.id}')">${nextLabel} ✏️</div>
           ${isOverride?`<div style="font-size:9px;color:var(--accent);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">MANUAL</div>`:''}
+
         </div>
       </div>`;
     }).join('');
@@ -1054,6 +1088,10 @@ function renderLogContent(){
     }
 
     html+=`<textarea class="notes-input" id="session-notes" placeholder="How did it feel? Anything to note? 💭" oninput="autosaveDraft()"></textarea>`;
+    html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <button class="btn btn-secondary btn-full" onclick="saveAsTemplate()">📋 Save as Template</button>
+      <button class="btn btn-secondary btn-full" onclick="openTemplateModal()">⚡ Load Template</button>
+    </div>`;
     html+=`<div class="save-row"><input type="date" class="date-input" id="session-date" value="${new Date().toISOString().split('T')[0]}"><button class="btn btn-primary" onclick="saveSession()">💾 Save Session</button></div>`;
   }
 
@@ -1108,93 +1146,140 @@ function renderWeightsSection(day,d){
 }
 
 function renderExCard(exName,sets,prevSets,pb){
+  // 2-col grid card
   const sid=safeId(exName);
-  const prevText=prevSets.length?'Last: '+prevSets.map(s=>(s.reps||'?')+' @ '+(s.weight||'?')+'kg').join(', '):'No previous data';
+  const isExpanded=cardCollapsed[exName]===false;
   const maxW=Math.max(...sets.map(s=>parseFloat(s.weight)||0));
   const isPB=maxW>0&&(!pb||maxW>pb.weight);
-  const isCollapsed=cardCollapsed[exName]!==false; // default collapsed
-  return `<div class="ex-card" id="excard-${sid}" draggable="true" data-exname="${exName}">
-    <div class="ex-card-header" onclick="toggleCollapse('${exName}')">
-      <span class="drag-handle" onclick="event.stopPropagation()">⠿</span>
-      <span class="collapse-icon ${isCollapsed?'':'open'}">▼</span>
-      <span class="ex-card-name">${exName}${isPB?' <span class="pb-tag">NEW PB!</span>':''}</span>
-      <button class="btn btn-secondary btn-sm" style="padding:4px 8px;min-height:30px;" onclick="event.stopPropagation();removeExercise('${exName}')">✕</button>
-    </div>
-    <div class="ex-card-body" id="exbody-${sid}" style="max-height:${isCollapsed?'0':'600px'}">
-      <div class="ex-prev">${prevText}</div>
-      <div class="set-tiles" id="settiles-${sid}">
-        ${sets.map((set,i)=>renderSetTile(exName,i,set,false)).join('')}
-        <div class="set-tile set-tile-add" onclick="addSetRow('${exName}')">＋</div>
-      </div>
-      <div class="set-editor" id="seteditor-${sid}">
-        <div class="set-editor-title">
-          <span id="seteditor-label-${sid}">Edit Set</span>
-        </div>
-        <div class="set-editor-row">
-          <div class="set-editor-group">
-            <div class="set-editor-label">Reps</div>
-            <div class="input-group">
-              <button class="pm-btn" onclick="tileAdjust('${exName}','reps',-1)">−</button>
-              <input class="num-input" type="number" inputmode="numeric" id="tile-reps-${sid}" placeholder="8" oninput="tileUpdate('${exName}','reps',this.value)">
-              <button class="pm-btn" onclick="tileAdjust('${exName}','reps',1)">+</button>
-            </div>
+  const hasAnyData=sets.some(s=>s.reps||s.weight);
+  const filledSets=sets.filter(s=>s.reps||s.weight).length;
+  const activeTile=selectedTile[exName];
+
+  if(!isExpanded){
+    return `<div class="ex-grid-card ${hasAnyData?'has-data':''}" id="excard-${sid}" data-exname="${exName}" onclick="expandExCard('${exName}')">
+      <div class="ex-grid-card-name">${exName}${isPB?' 🏆':''}</div>
+      <div class="ex-grid-card-sub">${hasAnyData?filledSets+' set'+(filledSets!==1?'s':'')+' logged':'tap to log'}</div>
+    </div>`;
+  }
+
+  // Expanded — full width
+  const prevText=prevSets.length?'Last: '+prevSets.map(s=>(s.reps||'?')+' @ '+(s.weight||'?')+'kg').join(', '):'No previous data';
+
+  const tilesHtml=sets.map((set,i)=>{
+    const hasData=!!(set.reps||set.weight);
+    const isSel=activeTile===i;
+    return `<div class="set-tile-v2 ${isSel?'selected':''} ${hasData?'has-data':''}" id="tile-${sid}-${i}" onclick="selectTile('${exName}',${i})">
+      <div class="stv2-num ${isSel?'sel':''}">S${i+1}${isSel?' ✓':''}</div>
+      ${hasData
+        ?`<div class="stv2-reps">${set.reps||'—'}</div><div class="stv2-weight">${set.weight?set.weight+'kg':'—'}</div>`
+        :`<div class="stv2-empty">tap</div>`
+      }
+    </div>`;
+  }).join('');
+
+  const editorHtml=activeTile!==undefined?`
+    <div class="set-editor-v2">
+      <div class="sed-title">Editing Set ${activeTile+1}</div>
+      <div class="sed-grid">
+        <div>
+          <div class="sed-label">Reps</div>
+          <div class="input-group">
+            <button class="pm-btn" onclick="tileAdjust('${exName}','reps',-1)">−</button>
+            <input class="num-input" type="number" inputmode="numeric" id="tile-reps-${sid}" placeholder="8" value="${sets[activeTile]?.reps||''}" oninput="tileUpdate('${exName}','reps',this.value)">
+            <button class="pm-btn" onclick="tileAdjust('${exName}','reps',1)">+</button>
           </div>
-          <div class="set-editor-group">
-            <div class="set-editor-label">Weight kg</div>
-            <div class="input-group weight-group">
-              <button class="pm-btn" onclick="tileAdjust('${exName}','weight',-0.5)">−</button>
-              <input class="num-input" type="number" inputmode="decimal" id="tile-weight-${sid}" placeholder="kg" step="0.5" oninput="tileUpdate('${exName}','weight',this.value)">
-              <button class="pm-btn" onclick="tileAdjust('${exName}','weight',0.5)">+</button>
-            </div>
+        </div>
+        <div>
+          <div class="sed-label">Weight kg</div>
+          <div class="input-group weight-group">
+            <button class="pm-btn" onclick="tileAdjust('${exName}','weight',-0.5)">−</button>
+            <input class="num-input" type="number" inputmode="decimal" id="tile-weight-${sid}" placeholder="kg" step="0.5" value="${sets[activeTile]?.weight||''}" oninput="tileUpdate('${exName}','weight',this.value)">
+            <button class="pm-btn" onclick="tileAdjust('${exName}','weight',0.5)">+</button>
           </div>
         </div>
-        <div style="margin-top:8px;">
-          <button class="btn btn-danger btn-sm btn-full" id="seteditor-del-${sid}" onclick="">🗑️ Remove Set</button>
-        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <button class="btn btn-danger btn-sm btn-full" onclick="removeSet('${exName}',${activeTile})">🗑️ Remove Set ${activeTile+1}</button>
+      </div>
+    </div>`:'';
+
+  return `<div class="ex-grid-card expanded" id="excard-${sid}" data-exname="${exName}">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+      <span class="drag-handle" style="font-size:14px;color:var(--text-dim);cursor:grab;" onclick="event.stopPropagation()">⠿</span>
+      <span class="ex-grid-card-name" style="flex:1;">${exName}${isPB?' <span class="pb-tag">NEW PB!</span>':''}</span>
+      <button class="btn btn-secondary btn-sm" style="padding:4px 8px;min-height:28px;font-size:14px;" onclick="event.stopPropagation();openWikiFromLog('${exName}')" title="View in wiki">ℹ️</button>
+      <button class="btn btn-secondary btn-sm" style="padding:4px 8px;min-height:28px;" onclick="event.stopPropagation();collapseExCard('${exName}')">↑ Done</button>
+      <button class="remove-set-btn" onclick="event.stopPropagation();removeExercise('${exName}')" title="Delete exercise">🗑️</button>
+    </div>
+    <div class="ex-expanded-prev">${prevText}</div>
+    <div class="set-tile-grid" id="settiles-${sid}">
+      ${tilesHtml}
+      <div class="set-tile-v2-add" onclick="addSetRow('${exName}')">
+        <div style="font-size:16px;color:#888;">+</div>
+        <div style="font-size:10px;color:#666;letter-spacing:1px;">set</div>
       </div>
     </div>
+    ${editorHtml}
   </div>`;
 }
 
-function renderSetTile(exName,i,set,selected){
-  const hasData=!!(set.reps||set.weight);
-  return `<div class="set-tile ${selected?'selected':''} ${hasData?'has-data':''}" id="tile-${safeId(exName)}-${i}" onclick="selectTile('${exName}',${i})">
-    <div class="set-tile-num">Set ${i+1}</div>
-    ${hasData
-      ?`<div class="set-tile-reps">${set.reps||'—'}</div><div class="set-tile-weight">${set.weight?set.weight+'kg':'—'}</div>`
-      :`<div class="set-tile-empty">tap to edit</div>`
-    }
-  </div>`;
+function expandExCard(exName){
+  cardCollapsed[exName]=false;
+  Object.keys(cardCollapsed).forEach(k=>{if(k!==exName&&cardCollapsed[k]===false)cardCollapsed[k]=true;});
+  const sets=logExercises[exName]||[];
+  const firstEmpty=sets.findIndex(s=>!s.reps&&!s.weight);
+  if(firstEmpty>=0)selectedTile[exName]=firstEmpty;
+  else if(sets.length>0)selectedTile[exName]=sets.length-1;
+  renderLogContent();
+  setTimeout(()=>{
+    const el=document.getElementById('excard-'+safeId(exName));
+    if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  },100);
 }
 
-let selectedTile={};
+function collapseExCard(exName){
+  cardCollapsed[exName]=true;
+  delete selectedTile[exName];
+  renderLogContent();
+}
 
 function selectTile(exName,i){
   const sid=safeId(exName);
   selectedTile[exName]=i;
-  // Update tile highlights
   const tilesEl=document.getElementById('settiles-'+sid);
   if(tilesEl){
-    tilesEl.querySelectorAll('.set-tile:not(.set-tile-add)').forEach((el,idx)=>{
+    tilesEl.querySelectorAll('.set-tile-v2:not(.set-tile-v2-add)').forEach((el,idx)=>{
       el.classList.toggle('selected',idx===i);
+      const numEl=el.querySelector('.stv2-num');
+      if(numEl){numEl.className='stv2-num'+(idx===i?' sel':'');numEl.textContent='S'+(idx+1)+(idx===i?' ✓':'');}
     });
   }
-  // Show editor
-  const editor=document.getElementById('seteditor-'+sid);
-  if(editor){
-    editor.classList.add('visible');
-    const set=logExercises[exName]?.[i]||{};
-    const repsEl=document.getElementById('tile-reps-'+sid);
-    const weightEl=document.getElementById('tile-weight-'+sid);
-    const labelEl=document.getElementById('seteditor-label-'+sid);
-    const delEl=document.getElementById('seteditor-del-'+sid);
-    if(repsEl)repsEl.value=set.reps||'';
-    if(weightEl)weightEl.value=set.weight||'';
-    if(labelEl)labelEl.textContent='Editing Set '+(i+1);
-    if(delEl){
-    delEl.textContent='🗑️ Remove Set '+(i+1);
-    delEl.onclick=()=>removeSet(exName,i);
-  }
+  // Update editor
+  const set=logExercises[exName]?.[i]||{};
+  const repsEl=document.getElementById('tile-reps-'+sid);
+  const weightEl=document.getElementById('tile-weight-'+sid);
+  if(repsEl)repsEl.value=set.reps||'';
+  if(weightEl)weightEl.value=set.weight||'';
+
+  // Re-render editor if needed
+  const card=document.getElementById('excard-'+sid);
+  if(card){
+    const editorEl=card.querySelector('.set-editor-v2');
+    if(!editorEl){
+      // Need to re-render whole card to show editor
+      const d=load();
+      const pbs=getPBs(d,activeUser);
+      const prevSessions=getUserSessions(d,activeUser).filter(s=>s.dayId===logDay);
+      const prev=prevSessions[prevSessions.length-1];
+      const prevMap={};
+      if(prev)(prev.exercises||[]).forEach(ex=>prevMap[ex.name]=ex.sets||[]);
+      card.outerHTML=renderExCard(exName,logExercises[exName]||[],prevMap[exName]||[],pbs[exName.toLowerCase()]);
+    } else {
+      const titleEl=editorEl.querySelector('.sed-title');
+      if(titleEl)titleEl.textContent='Editing Set '+(i+1);
+      const delBtn=editorEl.querySelector('.btn-danger');
+      if(delBtn){delBtn.textContent='🗑️ Remove Set '+(i+1);delBtn.onclick=()=>removeSet(exName,i);}
+    }
   }
 }
 
@@ -1204,17 +1289,19 @@ function tileUpdate(exName,field,value){
   if(!logExercises[exName])return;
   if(!logExercises[exName][i])logExercises[exName][i]={};
   logExercises[exName][i][field]=value;
-  // Update the tile display
+  // Update tile display
   const sid=safeId(exName);
   const tileEl=document.getElementById('tile-'+sid+'-'+i);
   if(tileEl){
     const set=logExercises[exName][i];
     const hasData=!!(set.reps||set.weight);
-    tileEl.className='set-tile selected has-data';
-    tileEl.innerHTML=hasData
-      ?`<div class="set-tile-num">Set ${i+1}</div><div class="set-tile-reps">${set.reps||'—'}</div><div class="set-tile-weight">${set.weight?set.weight+'kg':'—'}</div>`
-      :`<div class="set-tile-num">Set ${i+1}</div><div class="set-tile-empty">tap to edit</div>`;
-    tileEl.onclick=()=>selectTile(exName,i);
+    tileEl.querySelector('.stv2-reps')&&(tileEl.querySelector('.stv2-reps').textContent=set.reps||'—');
+    tileEl.querySelector('.stv2-weight')&&(tileEl.querySelector('.stv2-weight').textContent=set.weight?set.weight+'kg':'—');
+    if(hasData&&!tileEl.classList.contains('has-data')){
+      tileEl.classList.add('has-data');
+      tileEl.innerHTML=`<div class="stv2-num sel">S${i+1} ✓</div><div class="stv2-reps">${set.reps||'—'}</div><div class="stv2-weight">${set.weight?set.weight+'kg':'—'}</div>`;
+      tileEl.onclick=()=>selectTile(exName,i);
+    }
   }
   autosaveDraft();
   if(field==='weight')checkPB(exName);
@@ -1229,20 +1316,33 @@ function tileAdjust(exName,field,delta){
   logExercises[exName][i][field]=String(newVal);
   const sid=safeId(exName);
   const el=document.getElementById(field==='weight'?'tile-weight-'+sid:'tile-reps-'+sid);
-  if(el)el.value=newVal;
+  if(el){el.value=newVal;el.dispatchEvent(new Event('input'));}
   tileUpdate(exName,field,String(newVal));
 }
 
 function toggleCollapse(exName){
-  // Toggle: if undefined (default collapsed), set to expanded
-  cardCollapsed[exName]=cardCollapsed[exName]===false?true:false;
-  const sid=safeId(exName);
-  const body=document.getElementById('exbody-'+sid);
-  const icon=document.querySelector('#excard-'+sid+' .collapse-icon');
-  if(!body)return;
-  const collapsed=cardCollapsed[exName]!==false;
-  if(collapsed){body.style.maxHeight='0';if(icon)icon.classList.remove('open');}
-  else{body.style.maxHeight='600px';if(icon)icon.classList.add('open');}
+  if(cardCollapsed[exName]===false)collapseExCard(exName);
+  else expandExCard(exName);
+}
+
+function openWikiFromLog(exName){
+  const ex=(typeof WIKI_EXERCISES!=='undefined'?WIKI_EXERCISES:[]).find(e=>e.name.toLowerCase()===exName.toLowerCase());
+  const allEx=ex||(load().customExercises||[]).find(e=>e.name.toLowerCase()===exName.toLowerCase());
+  if(allEx){
+    document.getElementById('wiki-modal').classList.remove('hidden');
+    wikiFilter='All';
+    renderWikiFilters();
+    renderWikiList();
+    // Open detail directly
+    setTimeout(()=>openWikiDetail(allEx.id),100);
+  } else {
+    // Exercise not in wiki - offer to add it
+    showToast('Not in wiki yet — add it with + Custom!');
+    document.getElementById('wiki-modal').classList.remove('hidden');
+    wikiFilter='All';
+    renderWikiFilters();
+    renderWikiList();
+  }
 }
 
 
@@ -1777,7 +1877,7 @@ function renderProgContent(){
     const maxW=Math.max(...(ex.sets||[]).map(set=>parseFloat(set.weight)||0));
     if(maxW>0){if(!exHistory[ex.name])exHistory[ex.name]=[];exHistory[ex.name].push({date:s.date,weight:maxW});}
   });});
-  const topEx=Object.entries(exHistory).filter(([,arr])=>arr.length>=2).sort((a,b)=>b[1].length-a[1].length).slice(0,6);
+  const topEx=Object.entries(exHistory).filter(([,arr])=>arr.length>=1).sort((a,b)=>b[1].length-a[1].length).slice(0,6);
 
   const volData=sessions.slice(-12).map(s=>{
     let v=0;(s.exercises||[]).forEach(ex=>{(ex.sets||[]).forEach(set=>{v+=(parseFloat(set.weight)||0)*(parseInt(set.reps)||0);});});
@@ -1856,7 +1956,7 @@ function renderProgContent(){
   html+=`<div class="section-label" style="cursor:pointer;" onclick="toggleProgSection('muscles')">🔥 Muscles This Week <span id="prog-chev-muscles" style="font-size:11px;color:var(--text-dim);">▼</span></div><div id="prog-sec-muscles"><div class="card" style="padding:14px;margin-bottom:12px;"><div class="heatmap-grid">${MUSCLES.map(m=>{const hit=musclesHit.has(m);return '<div class="muscle-chip" style="background:'+(hit?user.color+'22':'var(--surface2)')+';border:1px solid '+(hit?user.color:'var(--border)')+';color:'+(hit?user.color:'var(--text-dim)')+';">'+(hit?'✓':' ')+' '+m+'</div>';}).join('')}</div></div>`;
 
   html+=`</div>`; // close muscles section
-  if(volData.length>=2)html+=`<div class="section-label" style="cursor:pointer;" onclick="toggleProgSection('vol')">📊 Session Volume <span id="prog-chev-vol" style="font-size:11px;color:var(--text-dim);">▼</span></div><div id="prog-sec-vol"><div class="chart-wrap"><canvas id="vol-chart" height="200"></canvas></div></div>`;
+  /* Session volume chart removed - was causing animation issues */
   topEx.forEach(([name,history],i)=>{
     const sid='exchart'+i;
     html+=`<div class="section-label" style="cursor:pointer;" onclick="toggleProgSection('${sid}')">${name} <span id="prog-chev-${sid}" style="font-size:11px;color:var(--text-dim);">▼</span></div><div id="prog-sec-${sid}"><div class="chart-wrap"><div class="chart-title-row"><span class="chart-title">${name}</span><span class="chart-pb">PB: ${Math.max(...history.map(h=>h.weight))}kg</span></div><canvas id="ex-chart-${i}" height="180"></canvas></div></div>`;
@@ -2814,6 +2914,354 @@ function closeSnake(){
   document.getElementById('timer-modal').classList.remove('hidden');
 }
 
+
+// ═══════════════════════════════════════════════
+// BACK BUTTON (History API)
+// ═══════════════════════════════════════════════
+window.addEventListener('popstate', e => {
+  const modals = ['wiki-modal','wiki-detail-modal','achievement-modal','edit-modal',
+    'next-day-modal','timer-modal','snake-modal','facts-modal','custom-ex-modal',
+    'emoji-modal','edit-session-modal','template-modal','measurements-modal'];
+  const openModal = modals.find(id => !document.getElementById(id)?.classList.contains('hidden'));
+  if (openModal) {
+    document.getElementById(openModal).classList.add('hidden');
+    history.pushState(e.state, '', '/');
+    return;
+  }
+  const tab = e.state?.tab || 'home';
+  showTab(tab, null, false);
+});
+
+// ═══════════════════════════════════════════════
+// WORKOUT TEMPLATES
+// ═══════════════════════════════════════════════
+function saveAsTemplate() {
+  if (!logDay || !Object.keys(logExercises).filter(k => logExercises[k].some(s => s.reps || s.weight)).length) {
+    showToast('Log some sets first!'); return;
+  }
+  const name = prompt('Template name:', (logDay.charAt(0).toUpperCase() + logDay.slice(1)) + ' Template');
+  if (!name) return;
+  const d = load();
+  if (!d.templates) d.templates = [];
+  d.templates.push({
+    id: 'tmpl_' + Date.now(), name, dayId: logDay, userId: activeUser,
+    exercises: JSON.parse(JSON.stringify(logExercises)),
+    createdAt: new Date().toISOString().split('T')[0]
+  });
+  save(d);
+  showToast('📋 Template saved!');
+}
+
+function openTemplateModal() {
+  const d = load();
+  const templates = (d.templates || []).filter(t => t.userId === activeUser);
+  const list = document.getElementById('template-list');
+  if (!templates.length) {
+    list.innerHTML = '<div class="empty"><span class="empty-icon">📋</span><div class="empty-text">No templates yet</div></div>';
+  } else {
+    list.innerHTML = templates.map(t => `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:14px;">${t.name}</div>
+          <div style="font-size:11px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">${Object.keys(t.exercises||{}).length} exercises · ${t.createdAt}</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="loadTemplate('${t.id}')">Load</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTemplate('${t.id}')">🗑️</button>
+      </div>`).join('');
+  }
+  document.getElementById('template-modal').classList.remove('hidden');
+}
+
+function loadTemplate(id) {
+  const d = load();
+  const t = (d.templates || []).find(t => t.id === id);
+  if (!t) return;
+  logExercises = JSON.parse(JSON.stringify(t.exercises));
+  Object.keys(logExercises).forEach(k => { cardCollapsed[k] = true; });
+  document.getElementById('template-modal').classList.add('hidden');
+  showToast('⚡ Template loaded!');
+  renderLogContent();
+}
+
+function deleteTemplate(id) {
+  if (!confirm('Delete this template?')) return;
+  const d = load();
+  d.templates = (d.templates || []).filter(t => t.id !== id);
+  save(d);
+  showToast('Deleted!');
+  openTemplateModal();
+}
+
+// ═══════════════════════════════════════════════
+// EDIT PAST SESSIONS
+// ═══════════════════════════════════════════════
+let editingSessionId = null;
+let editSessionExercises = {};
+
+function openEditSession(sessionId) {
+  const d = load();
+  const session = d.sessions.find(s => s.id === sessionId);
+  if (!session) return;
+  editingSessionId = sessionId;
+  editSessionExercises = JSON.parse(JSON.stringify(
+    (session.exercises || []).reduce((acc, ex) => { acc[ex.name] = ex.sets; return acc; }, {})
+  ));
+
+  const user = d.users.find(u => u.id === session.userId);
+  const dayMap = {};
+  (user?.days || []).forEach(dy => dayMap[dy.id] = dy);
+  const dayName = dayMap[session.dayId]?.name || session.dayId;
+
+  let html = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;">${dayName} · ${fmtDate(session.date)}</div>`;
+
+  Object.entries(editSessionExercises).forEach(([exName, sets]) => {
+    const sid = safeId(exName);
+    html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;">
+      <div style="font-weight:700;font-size:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span>${exName}</span>
+        <button class="btn btn-secondary btn-sm" onclick="addEditSet('${exName}')">+ Set</button>
+      </div>
+      <div id="edit-sets-${sid}">
+        ${sets.map((set, i) => renderEditSetRow(exName, i, set)).join('')}
+      </div>
+    </div>`;
+  });
+
+  // Add exercise
+  html += `<div class="add-ex-row" style="margin-top:8px;">
+    <input class="add-ex-input" id="edit-adhoc-input" placeholder="Add exercise...">
+    <button class="btn btn-secondary btn-sm" onclick="addEditExercise()">Add</button>
+  </div>`;
+
+  document.getElementById('edit-session-content').innerHTML = html;
+  document.getElementById('edit-session-modal').classList.remove('hidden');
+  document.getElementById('edit-session-modal').classList.remove('hidden');
+  history.pushState({ modal: 'edit-session' }, '', '/');
+}
+
+function renderEditSetRow(exName, i, set) {
+  const sid = safeId(exName);
+  return `<div style="display:grid;grid-template-columns:24px 1fr 1fr 28px;gap:6px;align-items:center;margin-bottom:6px;" id="edit-set-${sid}-${i}">
+    <div style="font-size:11px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;">S${i+1}</div>
+    <input class="form-input" type="number" inputmode="numeric" placeholder="reps" value="${set.reps||''}" style="padding:6px 8px;font-size:14px;text-align:center;"
+      oninput="updateEditSet('${exName}',${i},'reps',this.value)">
+    <input class="form-input" type="number" inputmode="decimal" placeholder="kg" value="${set.weight||''}" step="0.5" style="padding:6px 8px;font-size:14px;text-align:center;"
+      oninput="updateEditSet('${exName}',${i},'weight',this.value)">
+    <button class="remove-set-btn" onclick="removeEditSet('${exName}',${i})">✕</button>
+  </div>`;
+}
+
+function updateEditSet(exName, i, field, value) {
+  if (!editSessionExercises[exName]) return;
+  if (!editSessionExercises[exName][i]) editSessionExercises[exName][i] = {};
+  editSessionExercises[exName][i][field] = value;
+}
+
+function addEditSet(exName) {
+  if (!editSessionExercises[exName]) editSessionExercises[exName] = [];
+  const last = editSessionExercises[exName][editSessionExercises[exName].length - 1] || {};
+  editSessionExercises[exName].push({ reps: last.reps || '', weight: last.weight || '' });
+  const sid = safeId(exName);
+  const container = document.getElementById('edit-sets-' + sid);
+  if (container) container.innerHTML = editSessionExercises[exName].map((set, i) => renderEditSetRow(exName, i, set)).join('');
+}
+
+function removeEditSet(exName, i) {
+  if (!editSessionExercises[exName] || editSessionExercises[exName].length <= 1) return;
+  editSessionExercises[exName].splice(i, 1);
+  const sid = safeId(exName);
+  const container = document.getElementById('edit-sets-' + sid);
+  if (container) container.innerHTML = editSessionExercises[exName].map((set, i) => renderEditSetRow(exName, i, set)).join('');
+}
+
+function addEditExercise() {
+  const input = document.getElementById('edit-adhoc-input');
+  const name = (input?.value || '').trim();
+  if (!name) return;
+  editSessionExercises[name] = [{ reps: '', weight: '' }];
+  input.value = '';
+  openEditSession(editingSessionId); // re-render
+}
+
+function saveEditedSession() {
+  const d = load();
+  const idx = d.sessions.findIndex(s => s.id === editingSessionId);
+  if (idx < 0) return;
+  const exercises = Object.entries(editSessionExercises)
+    .filter(([, sets]) => sets.some(s => s.reps || s.weight))
+    .map(([name, sets]) => ({ name, sets: sets.filter(s => s.reps || s.weight) }));
+  d.sessions[idx].exercises = exercises;
+  // Recalculate PBs for this session
+  const prevSessions = getUserSessions(d, d.sessions[idx].userId).filter(s => new Date(s.date) < new Date(d.sessions[idx].date));
+  const prevPBs = {};
+  prevSessions.forEach(s => (s.exercises || []).forEach(ex => {
+    const maxW = Math.max(...(ex.sets || []).map(set => parseFloat(set.weight) || 0));
+    if (maxW > 0) { const k = ex.name.toLowerCase(); if (!prevPBs[k] || maxW > prevPBs[k]) prevPBs[k] = maxW; }
+  }));
+  d.sessions[idx].newPBs = exercises.flatMap(ex => {
+    const maxW = Math.max(...(ex.sets || []).map(s => parseFloat(s.weight) || 0));
+    const prev = prevPBs[ex.name.toLowerCase()];
+    return (maxW > 0 && (!prev || maxW > prev)) ? [{ exercise: ex.name, weight: maxW }] : [];
+  });
+  save(d);
+  showToast('✅ Session updated!');
+  document.getElementById('edit-session-modal').classList.add('hidden');
+  renderHistContent();
+  renderHome();
+}
+
+// ═══════════════════════════════════════════════
+// SUPERSET TAGGING
+// ═══════════════════════════════════════════════
+// Stored as array of pairs: [{a:'Bench Press', b:'Cable Fly'}]
+function getSupersets() {
+  return load().supersets || [];
+}
+
+function toggleSuperset(exA, exB) {
+  const d = load();
+  if (!d.supersets) d.supersets = [];
+  const idx = d.supersets.findIndex(s => (s.a === exA && s.b === exB) || (s.a === exB && s.b === exA));
+  if (idx >= 0) { d.supersets.splice(idx, 1); showToast('Superset removed'); }
+  else { d.supersets.push({ a: exA, b: exB }); showToast('💫 Superset tagged!'); }
+  save(d);
+}
+
+function isSupersetWith(exA) {
+  const ss = getSupersets();
+  const pair = ss.find(s => s.a === exA || s.b === exA);
+  if (!pair) return null;
+  return pair.a === exA ? pair.b : pair.a;
+}
+
+// ═══════════════════════════════════════════════
+// BODY MEASUREMENTS
+// ═══════════════════════════════════════════════
+const MEASUREMENT_FIELDS = [
+  { id: 'weight', label: 'Bodyweight', unit: 'kg' },
+  { id: 'waist', label: 'Waist', unit: 'cm' },
+  { id: 'hips', label: 'Hips', unit: 'cm' },
+  { id: 'chest', label: 'Chest', unit: 'cm' },
+  { id: 'left_arm', label: 'Left Arm', unit: 'cm' },
+  { id: 'right_arm', label: 'Right Arm', unit: 'cm' },
+  { id: 'left_thigh', label: 'Left Thigh', unit: 'cm' },
+  { id: 'right_thigh', label: 'Right Thigh', unit: 'cm' },
+];
+
+function openMeasurements(uid) {
+  const d = load();
+  const measurements = (d.measurements || {})[uid] || [];
+  const latest = measurements[measurements.length - 1] || {};
+
+  let html = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;">Log Today's Measurements</div>`;
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">`;
+  MEASUREMENT_FIELDS.forEach(f => {
+    const prev = latest[f.id] || '';
+    html += `<div>
+      <div style="font-size:10px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">${f.label} (${f.unit})</div>
+      <input class="form-input" type="number" step="0.1" id="meas-${f.id}" placeholder="${prev||'0'}" style="padding:8px;font-size:14px;text-align:center;">
+      ${prev ? `<div style="font-size:10px;color:var(--text-dim);text-align:center;margin-top:2px;">Last: ${prev}${f.unit}</div>` : ''}
+    </div>`;
+  });
+  html += '</div>';
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Date</div>`;
+  html += `<input type="date" class="form-input" id="meas-date" value="${new Date().toISOString().split('T')[0]}" style="margin-bottom:12px;">`;
+  html += `<button class="btn btn-primary btn-full" onclick="saveMeasurements('${uid}')">💾 Save Measurements</button>`;
+
+  if (measurements.length > 0) {
+    html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin:16px 0 8px;">History</div>`;
+    html += measurements.slice().reverse().slice(0, 5).map(m => `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:6px;">
+        <div style="font-size:11px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;margin-bottom:6px;">${fmtDate(m.date)}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${MEASUREMENT_FIELDS.filter(f => m[f.id]).map(f => `<span style="font-size:12px;background:var(--surface3);padding:2px 8px;border-radius:4px;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">${f.label}: <strong>${m[f.id]}${f.unit}</strong></span>`).join('')}
+        </div>
+      </div>`).join('');
+  }
+
+  document.getElementById('measurements-content').innerHTML = html;
+  document.getElementById('measurements-modal').classList.remove('hidden');
+}
+
+function saveMeasurements(uid) {
+  const d = load();
+  if (!d.measurements) d.measurements = {};
+  if (!d.measurements[uid]) d.measurements[uid] = [];
+  const entry = { date: document.getElementById('meas-date').value };
+  MEASUREMENT_FIELDS.forEach(f => {
+    const val = document.getElementById('meas-' + f.id)?.value;
+    if (val) entry[f.id] = parseFloat(val);
+  });
+  if (Object.keys(entry).length <= 1) { showToast('Enter at least one measurement!'); return; }
+  d.measurements[uid].push(entry);
+  save(d);
+  showToast('📏 Measurements saved!');
+  openMeasurements(uid);
+}
+
+// ═══════════════════════════════════════════════
+// REST DAY WARNING
+// ═══════════════════════════════════════════════
+const MUSCLE_GROUP_RECOVERY = {
+  push: ['Chest', 'Shoulders', 'Triceps'],
+  pull: ['Lats', 'Biceps', 'Rear Delts', 'Rhomboids'],
+  quads: ['Quads', 'Calves'],
+  glutes: ['Glutes', 'Hamstrings'],
+};
+
+function getRestDayWarning(userId, dayId) {
+  const d = load();
+  const sessions = getUserSessions(d, userId);
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  const targetMuscles = MUSCLE_GROUP_RECOVERY[dayId] || [];
+  if (!targetMuscles.length) return null;
+  const recent = sessions.filter(s => {
+    const sd = new Date(s.date).toDateString();
+    return (sd === today || sd === yesterday) && s.dayId !== dayId;
+  });
+  for (const s of recent) {
+    const overlap = (MUSCLE_GROUP_RECOVERY[s.dayId] || []).filter(m => targetMuscles.includes(m));
+    if (overlap.length > 0) {
+      const daysAgo = new Date(s.date).toDateString() === today ? 'today' : 'yesterday';
+      return `⚠️ You trained ${overlap.join(' & ')} ${daysAgo} — consider resting these muscles`;
+    }
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════
+// SINGLE LEG MODE
+// ═══════════════════════════════════════════════
+const SINGLE_LEG_EXERCISES = ['Hamstring Curls', 'Leg Extensions', 'Leg Press', 'Calf Raises', 'Seated Calf Raises', 'Hip Abduction', 'Glute Kickbacks', 'Single Leg RDL', 'Single Leg Extension'];
+
+function isSingleLegCapable(exName) {
+  return SINGLE_LEG_EXERCISES.some(e => e.toLowerCase() === exName.toLowerCase()) || exName.toLowerCase().includes('single leg');
+}
+
+function toggleSingleLeg(exName) {
+  if (!logExercises[exName]) return;
+  const current = logExercises[exName];
+  const isSL = current[0]?.singleLeg;
+  logExercises[exName] = current.map(s => ({ ...s, singleLeg: !isSL }));
+  autosaveDraft();
+  // Re-render just this card
+  const d = load();
+  const prevSessions = getUserSessions(d, activeUser).filter(s => s.dayId === logDay);
+  const prev = prevSessions[prevSessions.length - 1];
+  const prevMap = {};
+  if (prev) (prev.exercises || []).forEach(ex => prevMap[ex.name] = ex.sets || []);
+  const pbs = getPBs(d, activeUser);
+  const card = document.getElementById('excard-' + safeId(exName));
+  if (card) {
+    const div = document.createElement('div');
+    div.innerHTML = renderExCard(exName, logExercises[exName], prevMap[exName] || [], pbs[exName.toLowerCase()]);
+    card.replaceWith(div.firstChild);
+    initDragDrop();
+  }
+  showToast(isSL ? 'Both legs mode' : '🦵 Single leg mode');
+}
+
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
@@ -2968,6 +3416,42 @@ function closeSnake(){
     <button class="btn btn-primary btn-full" onclick="saveCustomExercise()">Save Exercise</button>
     <div style="height:8px;"></div>
     <button class="btn btn-secondary btn-full" onclick="closeCustomExModal()">Cancel</button>
+  </div>
+</div>
+
+
+<!-- TEMPLATE MODAL -->
+<div class="modal-overlay hidden" id="template-modal" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚡ Templates</div>
+    <div id="template-list"></div>
+    <div style="height:8px;"></div>
+    <button class="btn btn-secondary btn-full" onclick="document.getElementById('template-modal').classList.add('hidden')">Cancel</button>
+  </div>
+</div>
+
+<!-- EDIT SESSION MODAL -->
+<div class="modal-overlay hidden" id="edit-session-modal" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal" style="max-height:92vh;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Edit Session ✏️</div>
+    <div id="edit-session-content" style="overflow-y:auto;max-height:60vh;"></div>
+    <div style="height:8px;"></div>
+    <button class="btn btn-primary btn-full" onclick="saveEditedSession()">💾 Save Changes</button>
+    <div style="height:8px;"></div>
+    <button class="btn btn-secondary btn-full" onclick="document.getElementById('edit-session-modal').classList.add('hidden')">Cancel</button>
+  </div>
+</div>
+
+<!-- MEASUREMENTS MODAL -->
+<div class="modal-overlay hidden" id="measurements-modal" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📏 Measurements</div>
+    <div id="measurements-content"></div>
+    <div style="height:8px;"></div>
+    <button class="btn btn-secondary btn-full" onclick="document.getElementById('measurements-modal').classList.add('hidden')">Close</button>
   </div>
 </div>
 
