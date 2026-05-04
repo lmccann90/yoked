@@ -1446,25 +1446,27 @@ function addSetRow(exName){
 function removeSet(exName,i){
   if(!logExercises[exName])return;
   logExercises[exName].splice(i,1);
-  delete selectedTile[exName];
-  // Re-render the whole card tiles
-  const sid=safeId(exName);
-  const tilesEl=document.getElementById('settiles-'+sid);
-  if(tilesEl){
-    const addBtn=tilesEl.querySelector('.set-tile-add');
-    // Remove all tile divs
-    tilesEl.querySelectorAll('.set-tile:not(.set-tile-add)').forEach(el=>el.remove());
-    // Re-add them
-    logExercises[exName].forEach((set,idx)=>{
-      const div=document.createElement('div');
-      div.innerHTML=renderSetTile(exName,idx,set,false);
-      tilesEl.insertBefore(div.firstChild,addBtn);
-    });
-  }
-  // Hide editor
-  const editor=document.getElementById('seteditor-'+sid);
-  if(editor)editor.classList.remove('visible');
+  // Select previous tile or first tile
+  const newLen=logExercises[exName].length;
+  if(newLen>0)selectedTile[exName]=Math.min(i,newLen-1);
+  else delete selectedTile[exName];
+  cardCollapsed[exName]=false; // keep expanded
   autosaveDraft();
+  // Re-render the whole card
+  const sid=safeId(exName);
+  const card=document.getElementById('excard-'+sid);
+  if(card){
+    const d=load();
+    const prevSessions=getUserSessions(d,activeUser).filter(s=>s.dayId===logDay);
+    const prev=prevSessions[prevSessions.length-1];
+    const prevMap={};
+    if(prev)(prev.exercises||[]).forEach(ex=>prevMap[ex.name]=ex.sets||[]);
+    const pbs=getPBs(d,activeUser);
+    const div=document.createElement('div');
+    div.innerHTML=renderExCard(exName,logExercises[exName]||[],prevMap[exName]||[],pbs[exName.toLowerCase()]);
+    card.replaceWith(div.firstChild);
+    initDragDrop();
+  }
 }
 
 function removeExercise(exName){
@@ -3025,7 +3027,11 @@ function openEditSession(sessionId) {
   (user?.days || []).forEach(dy => dayMap[dy.id] = dy);
   const dayName = dayMap[session.dayId]?.name || session.dayId;
 
-  let html = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;">${dayName} · ${fmtDate(session.date)}</div>`;
+  let html = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;">${dayName}</div>
+  <div class="form-group">
+    <label class="form-label">Date</label>
+    <input type="date" class="form-input" id="edit-session-date" value="${session.date}">
+  </div>`;
 
   Object.entries(editSessionExercises).forEach(([exName, sets]) => {
     const sid = safeId(exName);
@@ -3103,7 +3109,11 @@ function saveEditedSession() {
   const exercises = Object.entries(editSessionExercises)
     .filter(([, sets]) => sets.some(s => s.reps || s.weight))
     .map(([name, sets]) => ({ name, sets: sets.filter(s => s.reps || s.weight) }));
+  const editedDate = document.getElementById('edit-session-date')?.value;
+  if(editedDate) d.sessions[idx].date = editedDate;
   d.sessions[idx].exercises = exercises;
+  const newDate = document.getElementById('edit-session-date')?.value;
+  if(newDate) d.sessions[idx].date = newDate;
   // Recalculate PBs for this session
   const prevSessions = getUserSessions(d, d.sessions[idx].userId).filter(s => new Date(s.date) < new Date(d.sessions[idx].date));
   const prevPBs = {};
