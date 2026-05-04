@@ -1092,7 +1092,7 @@ function renderLogContent(){
       <button class="btn btn-secondary btn-full" onclick="saveAsTemplate()">📋 Save as Template</button>
       <button class="btn btn-secondary btn-full" onclick="openTemplateModal()">⚡ Load Template</button>
     </div>`;
-    html+=`<div class="save-row"><input type="date" class="date-input" id="session-date" value="${new Date().toISOString().split('T')[0]}"><button class="btn btn-primary" onclick="saveSession()">💾 Save Session</button></div>`;
+    html+=`<div class="save-row"><input type="date" class="date-input" id="session-date" value="${localDateStr()}"><button class="btn btn-primary" onclick="saveSession()">💾 Save Session</button></div>`;
   }
 
   document.getElementById('log-content').innerHTML=html;
@@ -1128,16 +1128,20 @@ function renderWeightsSection(day,d){
   Object.keys(logExercises).forEach(e=>{if(!orderedExs.includes(e))orderedExs.push(e);});
   if(!Object.keys(logExercises).length){orderedExs.forEach(ex=>{logExercises[ex]=[{reps:'',weight:''}];});}
 
-  let html=`<div id="ex-list">`;
+  let html=`<div class="ex-grid" id="ex-list">`;
   orderedExs.forEach(exName=>{
     if(!logExercises[exName])logExercises[exName]=[{reps:'',weight:''}];
     html+=renderExCard(exName,logExercises[exName],prevMap[exName]||[],pbs[exName.toLowerCase()]);
   });
-  html+=`</div><div class="card" style="margin-bottom:12px;">
+  html+=`</div><div class="ex-grid-add" onclick="document.getElementById('adhoc-input')?.focus()" style="margin-bottom:12px;">
+    <div class="ex-grid-add-icon">＋</div>
+    <div class="ex-grid-add-label">Add Exercise</div>
+  </div>
+  <div class="card" style="margin-bottom:12px;display:none;" id="adhoc-card">
     <div class="card-header">Add Exercise</div>
     <div style="padding:10px 14px;">
       <input class="add-ex-input" id="adhoc-input" placeholder="Search wiki or type new name..." style="width:100%;margin-bottom:8px;" 
-        oninput="renderAdhocSuggestions()"
+        oninput="renderAdhocSuggestions();document.getElementById('adhoc-card').style.display='block';"
         onkeydown="if(event.key==='Enter'){event.preventDefault();confirmAdHocFromInput();}">
       <div id="adhoc-suggestions"></div>
     </div>
@@ -1156,9 +1160,14 @@ function renderExCard(exName,sets,prevSets,pb){
   const activeTile=selectedTile[exName];
 
   if(!isExpanded){
-    return `<div class="ex-grid-card ${hasAnyData?'has-data':''}" id="excard-${sid}" data-exname="${exName}" onclick="expandExCard('${exName}')">
-      <div class="ex-grid-card-name">${exName}${isPB?' 🏆':''}</div>
-      <div class="ex-grid-card-sub">${hasAnyData?filledSets+' set'+(filledSets!==1?'s':'')+' logged':'tap to log'}</div>
+    return `<div class="ex-grid-card ${hasAnyData?'has-data':''}" id="excard-${sid}" data-exname="${exName}" draggable="true">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="drag-handle" style="font-size:14px;color:var(--text-dim);cursor:grab;flex-shrink:0;" onclick="event.stopPropagation()">⠿</span>
+        <div style="flex:1;" onclick="expandExCard('${exName}')">
+          <div class="ex-grid-card-name">${exName}${isPB?' 🏆':''}</div>
+          <div class="ex-grid-card-sub">${hasAnyData?filledSets+' set'+(filledSets!==1?'s':'')+' logged':'tap to log'}</div>
+        </div>
+      </div>
     </div>`;
   }
 
@@ -2051,7 +2060,10 @@ function renderHistContent(){
         <div style="padding-top:12px;">${exDetail}${skillDetail}</div>
         ${s.bodyweight?`<div style="font-size:12px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;margin-bottom:10px;">⚖️ Bodyweight: ${s.bodyweight}kg</div>`:''}
         ${s.notes?`<div style="font-size:13px;color:var(--text-dim);font-style:italic;padding:8px 10px;background:var(--surface2);border-radius:6px;margin-bottom:12px;">"${s.notes}"</div>`:''}
-        <button class="btn btn-danger btn-sm btn-full" onclick="event.stopPropagation();deleteSession('${s.id}')">🗑️ Delete This Session</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="btn btn-secondary btn-sm btn-full" onclick="event.stopPropagation();openEditSession('${s.id}')">✏️ Edit</button>
+          <button class="btn btn-danger btn-sm btn-full" onclick="event.stopPropagation();deleteSession('${s.id}')">🗑️ Delete</button>
+        </div>
       </div>
     </div>`;
     }).join('');
@@ -2340,6 +2352,7 @@ function deleteBeast(uid){
 // ═══════════════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════════════
+function localDateStr(){const n=new Date();return n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2)+'-'+('0'+n.getDate()).slice(-2);}
 function fmtDate(s){if(!s)return'';const[y,m,d]=s.split('-');return `${d}/${m}/${y.slice(-2)}`;}
 function fmtShort(s){if(!s)return'';const[y,m,d]=s.split('-');return `${d}/${m}`;}
 function showToast(msg){
@@ -3165,7 +3178,7 @@ function openMeasurements(uid) {
   });
   html += '</div>';
   html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Date</div>`;
-  html += `<input type="date" class="form-input" id="meas-date" value="${new Date().toISOString().split('T')[0]}" style="margin-bottom:12px;">`;
+  html += `<input type="date" class="form-input" id="meas-date" value="${localDateStr()}" style="margin-bottom:12px;">`;
   html += `<button class="btn btn-primary btn-full" onclick="saveMeasurements('${uid}')">💾 Save Measurements</button>`;
 
   if (measurements.length > 0) {
