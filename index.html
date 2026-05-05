@@ -1136,15 +1136,11 @@ function renderWeightsSection(day,d){
     if(!logExercises[exName])logExercises[exName]=[{reps:'',weight:''}];
     html+=renderExCard(exName,logExercises[exName],prevMap[exName]||[],pbs[exName.toLowerCase()]);
   });
-  html+=`</div><div class="ex-grid-add" onclick="document.getElementById('adhoc-input')?.focus()" style="margin-bottom:12px;">
-    <div class="ex-grid-add-icon">＋</div>
-    <div class="ex-grid-add-label">Add Exercise</div>
-  </div>
-  <div class="card" style="margin-bottom:12px;display:none;" id="adhoc-card">
+  html+=`</div><div class="card" style="margin-bottom:12px;">
     <div class="card-header">Add Exercise</div>
     <div style="padding:10px 14px;">
       <input class="add-ex-input" id="adhoc-input" placeholder="Search wiki or type new name..." style="width:100%;margin-bottom:8px;" 
-        oninput="renderAdhocSuggestions();document.getElementById('adhoc-card').style.display='block';"
+        oninput="renderAdhocSuggestions()"
         onkeydown="if(event.key==='Enter'){event.preventDefault();confirmAdHocFromInput();}">
       <div id="adhoc-suggestions"></div>
     </div>
@@ -1216,15 +1212,14 @@ function renderExCard(exName,sets,prevSets,pb){
     </div>`:'';
 
   return `<div class="ex-grid-card expanded" id="excard-${sid}" data-exname="${exName}">
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;" onclick="collapseExCard('${exName}')">
       <span class="drag-handle" style="font-size:14px;color:var(--text-dim);cursor:grab;" onclick="event.stopPropagation()">⠿</span>
       <span class="ex-grid-card-name" style="flex:1;">${exName}${isPB?' <span class="pb-tag">NEW PB!</span>':''}</span>
       <button class="btn btn-secondary btn-sm" style="padding:4px 8px;min-height:28px;font-size:14px;" onclick="event.stopPropagation();openWikiFromLog('${exName}')" title="View in wiki">ℹ️</button>
-      <button class="btn btn-secondary btn-sm" style="padding:4px 8px;min-height:28px;" onclick="event.stopPropagation();collapseExCard('${exName}')">↑ Done</button>
       <button class="remove-set-btn" onclick="event.stopPropagation();removeExercise('${exName}')" title="Delete exercise">🗑️</button>
     </div>
     <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
-      ${isSingleLegCapable(exName)?`<button class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;${(logExercises[exName]||[])[0]?.singleLeg?'border-color:var(--accent);color:var(--accent);':''}" onclick="event.stopPropagation();toggleSingleLeg('${exName}')">🦵 ${(logExercises[exName]||[])[0]?.singleLeg?'Single Leg':'Both Legs'}</button>`:''}
+      ${isSingleLegCapable(exName)?`<button class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;${(logExercises[exName]||[])[0]?.singleLeg?'border-color:var(--accent);color:var(--accent);':''}" onclick="event.stopPropagation();openLegPicker('${exName}')">🦵 ${(logExercises[exName]||[])[0]?.singleLeg?(logExercises[exName]||[])[0].legSide||'Single Leg':'Both Legs'}</button>`:''}
       <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;${isSupersetWith('${exName}')?'border-color:#c084fc;color:#c084fc;':''}" onclick="event.stopPropagation();openSupersetPicker('${exName}')">💫 ${isSupersetWith('${exName}')?'Superset: '+isSupersetWith('${exName}'):'Add Superset'}</button>
     </div>
     <div class="ex-expanded-prev">${prevText}</div>
@@ -1706,10 +1701,52 @@ function initDragDrop(){
       }
     });
 
-    // Touch drag support
-    const handle=card.querySelector('.drag-handle');
-    if(handle){
-      let touchY=0,clone=null,origRect=null;
+    // Touch drag support - long press anywhere on collapsed card, or drag handle on expanded
+    const handle=card.querySelector('.drag-handle')||card;
+    let longPressTimer=null;
+    let touchY=0,clone=null,origRect=null,isDragging=false;
+    
+    card.addEventListener('touchstart',e=>{
+      if(card.classList.contains('expanded'))return; // expanded cards use handle only
+      longPressTimer=setTimeout(()=>{
+        isDragging=true;
+        touchY=e.touches[0].clientY;
+        origRect=card.getBoundingClientRect();
+        clone=card.cloneNode(true);
+        clone.style.cssText=`position:fixed;left:${origRect.left}px;top:${origRect.top}px;width:${origRect.width}px;opacity:0.8;z-index:999;pointer-events:none;border:2px solid var(--accent);border-radius:14px;`;
+        document.body.appendChild(clone);
+        card.style.opacity='0.3';
+        if(navigator.vibrate)navigator.vibrate(50);
+      },400);
+    },{passive:true});
+    
+    card.addEventListener('touchend',()=>{
+      clearTimeout(longPressTimer);
+      if(isDragging){
+        isDragging=false;
+        card.style.opacity='';
+        if(clone){clone.remove();clone=null;}
+        updateExOrder();
+      }
+    },{passive:true});
+    
+    card.addEventListener('touchmove',e=>{
+      if(!isDragging)return;
+      e.preventDefault();
+      const dy=e.touches[0].clientY-touchY;
+      if(clone)clone.style.top=(origRect.top+dy)+'px';
+      const midY=e.touches[0].clientY;
+      list.querySelectorAll('.ex-grid-card').forEach(c=>{
+        if(c===card)return;
+        const r=c.getBoundingClientRect();
+        const cMid=r.top+r.height/2;
+        if(Math.abs(midY-cMid)<r.height/2){
+          if(midY<cMid)c.before(card);else c.after(card);
+        }
+      });
+    },{passive:false});
+
+    if(handle&&handle!==card){
       handle.addEventListener('touchstart',e=>{
         touchY=e.touches[0].clientY;
         origRect=card.getBoundingClientRect();
@@ -3431,6 +3468,51 @@ function doExport() {
   showToast('📥 Export downloaded!');
 }
 
+
+// ═══════════════════════════════════════════════
+// LEG PICKER
+// ═══════════════════════════════════════════════
+let legPickerEx = null;
+function openLegPicker(exName) {
+  legPickerEx = exName;
+  const current = (logExercises[exName]||[])[0]?.singleLeg;
+  const side = (logExercises[exName]||[])[0]?.legSide;
+  const btns = document.getElementById('leg-picker-btns');
+  const opts = [
+    {label:'Both Legs', value:null, icon:'🦵🦵'},
+    {label:'Left Leg', value:'Left Leg', icon:'🦵←'},
+    {label:'Right Leg', value:'Right Leg', icon:'🦵→'},
+  ];
+  btns.innerHTML = opts.map(o => `
+    <button class="btn btn-secondary btn-full" style="${(!current&&!o.value)||side===o.value?'border-color:var(--accent);color:var(--accent);':''}"
+      onclick="setLegMode('${exName}','${o.value||''}');document.getElementById('leg-picker-modal').classList.add('hidden')">
+      ${o.icon} ${o.label}
+    </button>`).join('');
+  document.getElementById('leg-picker-modal').classList.remove('hidden');
+}
+
+function setLegMode(exName, legSide) {
+  if (!logExercises[exName]) return;
+  const isSL = !!legSide;
+  logExercises[exName] = logExercises[exName].map(s => ({...s, singleLeg: isSL, legSide: legSide||null}));
+  autosaveDraft();
+  cardCollapsed[exName] = false;
+  const d = load();
+  const prevSessions = getUserSessions(d, activeUser).filter(s => s.dayId === logDay);
+  const prev = prevSessions[prevSessions.length - 1];
+  const prevMap = {};
+  if (prev) (prev.exercises||[]).forEach(ex => prevMap[ex.name] = ex.sets||[]);
+  const pbs = getPBs(d, activeUser);
+  const card = document.getElementById('excard-' + safeId(exName));
+  if (card) {
+    const div = document.createElement('div');
+    div.innerHTML = renderExCard(exName, logExercises[exName], prevMap[exName]||[], pbs[exName.toLowerCase()]);
+    card.replaceWith(div.firstChild);
+    initDragDrop();
+  }
+  showToast(isSL ? '🦵 ' + legSide + ' mode' : 'Both legs mode');
+}
+
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
@@ -3650,6 +3732,18 @@ function doExport() {
     <button class="btn btn-primary btn-full" onclick="doExport()">📥 Export Selected</button>
     <div style="height:8px;"></div>
     <button class="btn btn-secondary btn-full" onclick="document.getElementById('export-modal').classList.add('hidden')">Cancel</button>
+  </div>
+</div>
+
+
+<!-- LEG PICKER MODAL -->
+<div class="modal-overlay hidden" id="leg-picker-modal" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🦵 Select Leg</div>
+    <div style="display:flex;flex-direction:column;gap:8px;" id="leg-picker-btns"></div>
+    <div style="height:8px;"></div>
+    <button class="btn btn-secondary btn-full" onclick="document.getElementById('leg-picker-modal').classList.add('hidden')">Cancel</button>
   </div>
 </div>
 
