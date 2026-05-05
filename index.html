@@ -368,7 +368,10 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
 
   <!-- HISTORY -->
   <div class="page" id="page-history">
-    <div class="page-title">SESSION <span>HISTORY</span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="page-title" style="margin-bottom:0;">SESSION <span>HISTORY</span></div>
+      <button class="btn btn-secondary btn-sm" onclick="openExportModal()">📤 Export</button>
+    </div>
     <div class="user-pills" id="history-user-pills"></div>
     <div id="history-content"></div>
   </div>
@@ -1213,12 +1216,16 @@ function renderExCard(exName,sets,prevSets,pb){
     </div>`:'';
 
   return `<div class="ex-grid-card expanded" id="excard-${sid}" data-exname="${exName}">
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
       <span class="drag-handle" style="font-size:14px;color:var(--text-dim);cursor:grab;" onclick="event.stopPropagation()">⠿</span>
       <span class="ex-grid-card-name" style="flex:1;">${exName}${isPB?' <span class="pb-tag">NEW PB!</span>':''}</span>
       <button class="btn btn-secondary btn-sm" style="padding:4px 8px;min-height:28px;font-size:14px;" onclick="event.stopPropagation();openWikiFromLog('${exName}')" title="View in wiki">ℹ️</button>
       <button class="btn btn-secondary btn-sm" style="padding:4px 8px;min-height:28px;" onclick="event.stopPropagation();collapseExCard('${exName}')">↑ Done</button>
       <button class="remove-set-btn" onclick="event.stopPropagation();removeExercise('${exName}')" title="Delete exercise">🗑️</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+      ${isSingleLegCapable(exName)?`<button class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;${(logExercises[exName]||[])[0]?.singleLeg?'border-color:var(--accent);color:var(--accent);':''}" onclick="event.stopPropagation();toggleSingleLeg('${exName}')">🦵 ${(logExercises[exName]||[])[0]?.singleLeg?'Single Leg':'Both Legs'}</button>`:''}
+      <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;${isSupersetWith('${exName}')?'border-color:#c084fc;color:#c084fc;':''}" onclick="event.stopPropagation();openSupersetPicker('${exName}')">💫 ${isSupersetWith('${exName}')?'Superset: '+isSupersetWith('${exName}'):'Add Superset'}</button>
     </div>
     <div class="ex-expanded-prev">${prevText}</div>
     <div class="set-tile-grid" id="settiles-${sid}">
@@ -1249,6 +1256,10 @@ function expandExCard(exName){
 function collapseExCard(exName){
   cardCollapsed[exName]=true;
   delete selectedTile[exName];
+  autosaveDraft();
+  // Sync to sheets on Done so data is safe even if Chrome closes
+  const d=load();
+  syncToSheets(d);
   renderLogContent();
 }
 
@@ -1433,13 +1444,23 @@ function addSetRow(exName){
   // Re-render tiles
   const sid=safeId(exName);
   const tilesEl=document.getElementById('settiles-'+sid);
-  if(tilesEl){
-    const addBtn=tilesEl.querySelector('.set-tile-add');
-    const newTile=document.createElement('div');
-    newTile.innerHTML=renderSetTile(exName,newIdx,logExercises[exName][newIdx],false);
-    tilesEl.insertBefore(newTile.firstChild,addBtn);
+  // Re-render whole card to show new tile properly
+  cardCollapsed[exName]=false;
+  const d2=load();
+  const prevSessions2=getUserSessions(d2,activeUser).filter(s=>s.dayId===logDay);
+  const prev2=prevSessions2[prevSessions2.length-1];
+  const prevMap2={};
+  if(prev2)(prev2.exercises||[]).forEach(ex=>prevMap2[ex.name]=ex.sets||[]);
+  const pbs2=getPBs(d2,activeUser);
+  selectedTile[exName]=newIdx;
+  const sid2=safeId(exName);
+  const card2=document.getElementById('excard-'+sid2);
+  if(card2){
+    const div=document.createElement('div');
+    div.innerHTML=renderExCard(exName,logExercises[exName],prevMap2[exName]||[],pbs2[exName.toLowerCase()]);
+    card2.replaceWith(div.firstChild);
+    initDragDrop();
   }
-  selectTile(exName,newIdx);
   autosaveDraft();
 }
 
@@ -1668,14 +1689,15 @@ let dragSrc=null;
 function initDragDrop(){
   const list=document.getElementById('ex-list');
   if(!list)return;
-  list.querySelectorAll('.ex-card').forEach(card=>{
+  list.querySelectorAll('.ex-grid-card').forEach(card=>{
+    card.setAttribute('draggable','true');
     card.addEventListener('dragstart',e=>{dragSrc=card;card.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
-    card.addEventListener('dragend',()=>{dragSrc=null;document.querySelectorAll('.ex-card').forEach(c=>{c.classList.remove('dragging','drag-over');});updateExOrder();});
-    card.addEventListener('dragover',e=>{e.preventDefault();if(card!==dragSrc){document.querySelectorAll('.ex-card').forEach(c=>c.classList.remove('drag-over'));card.classList.add('drag-over');}});
+    card.addEventListener('dragend',()=>{dragSrc=null;document.querySelectorAll('.ex-grid-card').forEach(c=>{c.classList.remove('dragging','drag-over');});updateExOrder();});
+    card.addEventListener('dragover',e=>{e.preventDefault();if(card!==dragSrc){document.querySelectorAll('.ex-grid-card').forEach(c=>c.classList.remove('drag-over'));card.classList.add('drag-over');}});
     card.addEventListener('drop',e=>{
       e.preventDefault();
       if(dragSrc&&dragSrc!==card){
-        const allCards=[...list.querySelectorAll('.ex-card')];
+        const allCards=[...list.querySelectorAll('.ex-grid-card')];
         const srcIdx=allCards.indexOf(dragSrc);
         const dstIdx=allCards.indexOf(card);
         if(srcIdx<dstIdx)card.after(dragSrc);
@@ -2372,7 +2394,15 @@ const WIKI_EXERCISES = [{"id": "bench_press", "name": "Bench Press", "category":
 {"id": "landmine_press", "name": "Landmine Press", "category": "Push", "equipment": "Barbell", "primary": ["Shoulders", "Upper Chest"], "secondary": ["Triceps", "Core"], "steps": ["Anchor barbell in corner or landmine attachment", "Hold end of bar at shoulder height", "Press upward and forward in arc", "Lower with control"], "cues": ["Keep core braced throughout", "Press in an arc \u2014 not straight up", "Keep elbow tucked, not flared"], "tips": ["Very shoulder-friendly pressing movement", "Great for people with shoulder issues", "Single arm version adds core challenge"], "youtube": "https://www.youtube.com/watch?v=0FAsNOpUTiI"},
 {"id": "single_leg_rdl", "name": "Single Leg RDL", "category": "Glutes", "equipment": "Dumbbell/Barbell", "primary": ["Hamstrings", "Glutes"], "secondary": ["Core", "Hip Stabilisers"], "steps": ["Stand on one leg, slight bend in knee", "Hinge at hip, extending free leg behind", "Lower weight toward floor", "Drive hip forward to return"], "cues": ["Hips stay SQUARE \u2014 don't rotate open", "Free leg and torso move as one unit", "Brace core hard for balance"], "tips": ["Excellent for fixing hamstring imbalances between legs", "Start lighter than you think \u2014 balance is challenging", "Hold dumbbells in both hands or one for different feels"], "youtube": "https://www.youtube.com/watch?v=2Dy8HBfD6EE"},
 {"id": "single_leg_extension", "name": "Single Leg Extension", "category": "Legs", "equipment": "Machine", "primary": ["Quads"], "secondary": ["None"], "steps": ["Adjust machine for one leg", "Extend leg fully", "Squeeze quad at top", "Lower slowly"], "cues": ["Slow negative \u2014 3 seconds down", "Full extension at top", "Don't let hip lift off seat"], "tips": ["Great for finding and fixing quad imbalances", "Can do both legs first then finish with weaker leg", "Higher reps work well \u2014 12-15"], "youtube": "https://www.youtube.com/watch?v=YyvSfVjQeL0"},
-{"id": "incline_pushup", "name": "Incline Press Up", "category": "Push", "equipment": "Bodyweight", "primary": ["Upper Chest"], "secondary": ["Triceps", "Shoulders", "Core"], "steps": ["Hands elevated on bench or plate", "Body in straight line", "Lower chest to bench level", "Press back up"], "cues": ["Elbows at 45 degrees \u2014 not flared", "Full range of motion", "Core tight throughout"], "tips": ["Elevation targets upper chest like incline bench", "Using a plate raises hands slightly for more range", "Great finisher after pressing work"], "youtube": "https://www.youtube.com/watch?v=cfns5sqAJ4I"}];
+{"id": "incline_pushup", "name": "Incline Press Up", "category": "Push", "equipment": "Bodyweight", "primary": ["Upper Chest"], "secondary": ["Triceps", "Shoulders", "Core"], "steps": ["Hands elevated on bench or plate", "Body in straight line", "Lower chest to bench level", "Press back up"], "cues": ["Elbows at 45 degrees \u2014 not flared", "Full range of motion", "Core tight throughout"], "tips": ["Elevation targets upper chest like incline bench", "Using a plate raises hands slightly for more range", "Great finisher after pressing work"], "youtube": "https://www.youtube.com/watch?v=cfns5sqAJ4I"},
+  {"id": "back_extension_ex", "name": "Back Extension", "category": "Glutes", "equipment": "Machine", "primary": ["Spinal Erectors", "Glutes"], "secondary": ["Hamstrings"], "steps": ["Position hips at edge of pad", "Lower torso toward floor", "Raise back to parallel", "Add weight at chest for resistance"], "cues": ["Don't hyperextend at top", "Control the movement", "Squeeze glutes at top"], "tips": ["Great for lower back strength", "Add plate to chest to progress", "Also works glutes when you extend hips"], "youtube": "https://www.youtube.com/watch?v=ph3pddpKzzw"},
+  {"id": "walking_lunges_ex", "name": "Walking Lunges", "category": "Legs", "equipment": "Bodyweight/Dumbbell", "primary": ["Quads", "Glutes"], "secondary": ["Hamstrings", "Core"], "steps": ["Stand tall, step forward", "Back knee lowers toward floor", "Drive front foot to stand and step through", "Alternate legs"], "cues": ["Keep torso upright", "Front knee tracks over toes", "Step long enough that shin is vertical"], "tips": ["Rear knee touching floor = full range", "Great for leg hypertrophy and conditioning"], "youtube": "https://www.youtube.com/watch?v=L8fvypPrzzs"},
+  {"id": "chest_press_machine_ex", "name": "Chest Press", "category": "Push", "equipment": "Machine", "primary": ["Chest"], "secondary": ["Triceps", "Shoulders"], "steps": ["Adjust seat so handles at chest height", "Press forward until nearly extended", "Control return"], "cues": ["Don't shrug shoulders", "Keep back against pad"], "tips": ["Great for beginners or high rep finishers", "Safer than free weights when fatigued"], "youtube": "https://www.youtube.com/watch?v=xUm0BiZCX_I"},
+  {"id": "incline_db_press", "name": "Incline Dumbbell Press", "category": "Push", "equipment": "Dumbbell", "primary": ["Upper Chest"], "secondary": ["Shoulders", "Triceps"], "steps": ["Set bench to 30-45 degrees", "Hold dumbbells at chest level", "Press up and slightly in", "Lower with control"], "cues": ["Don't let elbows flare too wide", "Control the descent", "Keep core braced"], "tips": ["30 degrees hits upper chest better than 45", "Dumbbells allow greater range than barbell"], "youtube": "https://www.youtube.com/watch?v=DbFgADa2PL8"},
+  {"id": "dip_ex", "name": "Dips", "category": "Push", "equipment": "Bodyweight/Weighted", "primary": ["Triceps", "Lower Chest"], "secondary": ["Shoulders", "Core"], "steps": ["Support on parallel bars", "Lower body by bending elbows", "Keep slight forward lean", "Press back up"], "cues": ["Don't go too deep if shoulders complain", "Control the descent"], "tips": ["Upright torso = tricep dominant", "Forward lean = chest dominant", "One of the best upper body mass builders"], "youtube": "https://www.youtube.com/watch?v=2z8JmcrW-As"},
+  {"id": "glute_kickback_ex", "name": "Glute Kickbacks", "category": "Glutes", "equipment": "Cable/Machine", "primary": ["Glutes"], "secondary": ["Hamstrings"], "steps": ["Attach ankle cuff to cable", "Kick leg back and up squeezing glute", "Control return"], "cues": ["Squeeze and pause at top", "Don't swing \u2014 control the movement", "Slight forward lean helps"], "tips": ["Great for upper glute and glute medius", "Pause at peak contraction for max activation"], "youtube": "https://www.youtube.com/watch?v=Ex39mS4E-8c"},
+  {"id": "hack_squat_ex", "name": "Hack Squats", "category": "Legs", "equipment": "Machine", "primary": ["Quads"], "secondary": ["Glutes", "Hamstrings"], "steps": ["Position on machine, shoulders under pads", "Lower to full depth", "Press back up"], "cues": ["Don't let knees cave", "Full depth for maximum quad activation", "Keep back against pad"], "tips": ["More quad focused than leg press", "Feet lower on plate = more quad", "Great for building quad sweep"], "youtube": "https://www.youtube.com/watch?v=0tn5K9NlCfo"},
+  {"id": "hamstring_curl_ex", "name": "Hamstring Curls", "category": "Glutes", "equipment": "Machine", "primary": ["Hamstrings"], "secondary": ["Calves"], "steps": ["Lie face down, pad above ankles", "Curl heels toward glutes", "Squeeze at top", "Lower slowly"], "cues": ["Hips stay flat \u2014 press them down", "Full range both ways", "Control the descent"], "tips": ["Slow negative is where gains are", "Ankle pad should be just above ankle bone"], "youtube": "https://www.youtube.com/watch?v=1Tq3QdYUuHs"}];
 
 const MUSCLE_COLORS = {
   'Chest':'#ff6b35','Upper Chest':'#ff6b35','Lower Chest':'#ff8855',
@@ -3285,6 +3315,122 @@ function toggleSingleLeg(exName) {
   showToast(isSL ? 'Both legs mode' : '🦵 Single leg mode');
 }
 
+
+// ═══════════════════════════════════════════════
+// SUPERSET PICKER
+// ═══════════════════════════════════════════════
+let supersetPickerEx = null;
+
+function openSupersetPicker(exName) {
+  supersetPickerEx = exName;
+  const currentPair = isSupersetWith(exName);
+  const exercises = Object.keys(logExercises).filter(e => e !== exName);
+  const list = document.getElementById('superset-picker-list');
+  
+  if (currentPair) {
+    list.innerHTML = `<div style="background:rgba(192,132,252,0.1);border:1px solid #c084fc55;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:12px;font-size:13px;">
+      Currently supersetted with <strong>${currentPair}</strong>
+    </div>
+    <button class="btn btn-danger btn-full" style="margin-bottom:8px;" onclick="toggleSuperset('${exName}','${currentPair}');document.getElementById('superset-modal').classList.add('hidden');renderLogContent();">Remove Superset</button>`;
+  } else if (!exercises.length) {
+    list.innerHTML = '<div class="empty"><span class="empty-icon">💫</span><div class="empty-text">Add more exercises to create a superset</div></div>';
+  } else {
+    list.innerHTML = exercises.map(ex => `
+      <div onclick="toggleSuperset('${exName}','${ex}');document.getElementById('superset-modal').classList.add('hidden');renderLogContent();"
+        style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:14px;">${ex}</span>
+        <span style="color:#c084fc;font-size:12px;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">Pair →</span>
+      </div>`).join('');
+  }
+  document.getElementById('superset-modal').classList.remove('hidden');
+}
+
+
+// ═══════════════════════════════════════════════
+// EXPORT WORKOUTS
+// ═══════════════════════════════════════════════
+let exportSelected = new Set();
+
+function openExportModal() {
+  const d = load();
+  const sessions = getUserSessions(d, activeUser).slice().reverse();
+  exportSelected = new Set(sessions.map(s => s.id));
+  renderExportList(sessions);
+  document.getElementById('export-modal').classList.remove('hidden');
+}
+
+function renderExportList(sessions) {
+  const d = load();
+  const user = d.users.find(u => u.id === activeUser);
+  document.getElementById('export-session-list').innerHTML = sessions.map(s => {
+    const day = (user?.days || []).find(dy => dy.id === s.dayId);
+    const vol = Math.round((s.exercises || []).reduce((t, ex) => t + (ex.sets || []).reduce((st, set) => st + (parseFloat(set.weight) || 0) * (parseInt(set.reps) || 0), 0), 0));
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <input type="checkbox" id="exp-${s.id}" ${exportSelected.has(s.id) ? 'checked' : ''} 
+        onchange="exportSelected.has('${s.id}')?exportSelected.delete('${s.id}'):exportSelected.add('${s.id}')"
+        style="width:18px;height:18px;accent-color:var(--accent);">
+      <label for="exp-${s.id}" style="flex:1;cursor:pointer;">
+        <div style="font-size:14px;font-weight:600;">${day?.icon || ''} ${day?.name || s.dayId}</div>
+        <div style="font-size:11px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">${fmtDate(s.date)} · ${vol.toLocaleString()}kg · ${(s.exercises||[]).length} exercises</div>
+      </label>
+    </div>`;
+  }).join('');
+}
+
+function toggleSelectAll() {
+  const d = load();
+  const sessions = getUserSessions(d, activeUser);
+  const allSelected = sessions.every(s => exportSelected.has(s.id));
+  if (allSelected) {
+    exportSelected.clear();
+  } else {
+    sessions.forEach(s => exportSelected.add(s.id));
+  }
+  renderExportList(sessions.slice().reverse());
+}
+
+function doExport() {
+  if (!exportSelected.size) { showToast('Select at least one session!'); return; }
+  const d = load();
+  const user = d.users.find(u => u.id === activeUser);
+  const sessions = getUserSessions(d, activeUser).filter(s => exportSelected.has(s.id));
+  
+  let text = `YOKED — ${user?.name || 'Workout'} Export\n`;
+  text += `Generated: ${fmtDate(localDateStr())}\n`;
+  text += '='.repeat(40) + '\n\n';
+  
+  sessions.forEach(s => {
+    const day = (user?.days || []).find(dy => dy.id === s.dayId);
+    const vol = Math.round((s.exercises || []).reduce((t, ex) => t + (ex.sets || []).reduce((st, set) => st + (parseFloat(set.weight) || 0) * (parseInt(set.reps) || 0), 0), 0));
+    text += `${fmtDate(s.date)} — ${day?.icon || ''} ${day?.name || s.dayId}\n`;
+    text += `Total volume: ${vol.toLocaleString()}kg\n`;
+    if (s.bodyweight) text += `Bodyweight: ${s.bodyweight}kg\n`;
+    text += '\n';
+    (s.exercises || []).forEach(ex => {
+      text += `  ${ex.name}\n`;
+      (ex.sets || []).forEach((set, i) => {
+        const parts = [];
+        if (set.reps) parts.push(`${set.reps} reps`);
+        if (set.weight) parts.push(`${set.weight}kg`);
+        text += `    S${i + 1}: ${parts.join(' @ ') || '—'}\n`;
+      });
+    });
+    if (s.notes) text += `\nNotes: ${s.notes}\n`;
+    text += '\n' + '-'.repeat(30) + '\n\n';
+  });
+  
+  // Download as text file
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `YOKED_${user?.name || 'export'}_${localDateStr()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('export-modal').classList.add('hidden');
+  showToast('📥 Export downloaded!');
+}
+
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
@@ -3475,6 +3621,35 @@ function toggleSingleLeg(exName) {
     <div id="measurements-content"></div>
     <div style="height:8px;"></div>
     <button class="btn btn-secondary btn-full" onclick="document.getElementById('measurements-modal').classList.add('hidden')">Close</button>
+  </div>
+</div>
+
+
+<!-- SUPERSET PICKER MODAL -->
+<div class="modal-overlay hidden" id="superset-modal" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">💫 Superset With...</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Pick an exercise to pair as a superset</div>
+    <div id="superset-picker-list"></div>
+    <div style="height:8px;"></div>
+    <button class="btn btn-secondary btn-full" onclick="document.getElementById('superset-modal').classList.add('hidden')">Cancel</button>
+  </div>
+</div>
+
+
+<!-- EXPORT MODAL -->
+<div class="modal-overlay hidden" id="export-modal" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal" style="max-height:90vh;">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="modal-title" style="margin-bottom:0;">📤 Export Workouts</div>
+      <button class="btn btn-secondary btn-sm" onclick="toggleSelectAll()">Select All</button>
+    </div>
+    <div id="export-session-list" style="max-height:50vh;overflow-y:auto;margin-bottom:16px;"></div>
+    <button class="btn btn-primary btn-full" onclick="doExport()">📥 Export Selected</button>
+    <div style="height:8px;"></div>
+    <button class="btn btn-secondary btn-full" onclick="document.getElementById('export-modal').classList.add('hidden')">Cancel</button>
   </div>
 </div>
 
