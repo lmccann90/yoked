@@ -608,8 +608,7 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
-// ═══════════════════════════════════════════════
+<script>// ═══════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════
 const COLORS=['#c8ff00','#ff6b35','#00d4ff','#ff4a9b','#4aff9b','#c084fc','#fb923c','#34d399','#f472b6','#60a5fa'];
@@ -1701,52 +1700,69 @@ function initDragDrop(){
       }
     });
 
-    // Touch drag support - long press anywhere on collapsed card, or drag handle on expanded
-    const handle=card.querySelector('.drag-handle')||card;
+    // Touch drag - long press on collapsed card to drag
     let longPressTimer=null;
-    let touchY=0,clone=null,origRect=null,isDragging=false;
-    
-    card.addEventListener('touchstart',e=>{
-      if(card.classList.contains('expanded'))return; // expanded cards use handle only
-      longPressTimer=setTimeout(()=>{
-        isDragging=true;
-        touchY=e.touches[0].clientY;
-        origRect=card.getBoundingClientRect();
-        clone=card.cloneNode(true);
-        clone.style.cssText=`position:fixed;left:${origRect.left}px;top:${origRect.top}px;width:${origRect.width}px;opacity:0.8;z-index:999;pointer-events:none;border:2px solid var(--accent);border-radius:14px;`;
-        document.body.appendChild(clone);
-        card.style.opacity='0.3';
-        if(navigator.vibrate)navigator.vibrate(50);
-      },400);
-    },{passive:true});
-    
-    card.addEventListener('touchend',()=>{
+    let touchStartY=0,touchStartX=0,clone=null,origRect=null,isDragging=false;
+
+    function startDrag(e){
+      isDragging=true;
+      touchStartY=e.touches[0].clientY;
+      touchStartX=e.touches[0].clientX;
+      origRect=card.getBoundingClientRect();
+      clone=card.cloneNode(true);
+      clone.style.cssText='position:fixed;left:'+origRect.left+'px;top:'+origRect.top+'px;width:'+origRect.width+'px;opacity:0.85;z-index:9999;pointer-events:none;border:2px solid var(--accent);border-radius:14px;transition:none;';
+      document.body.appendChild(clone);
+      card.style.opacity='0.3';
+      if(navigator.vibrate)navigator.vibrate(50);
+    }
+
+    function endDrag(){
       clearTimeout(longPressTimer);
+      longPressTimer=null;
       if(isDragging){
         isDragging=false;
         card.style.opacity='';
         if(clone){clone.remove();clone=null;}
         updateExOrder();
       }
+    }
+
+    card.addEventListener('touchstart',e=>{
+      if(card.classList.contains('expanded'))return;
+      longPressTimer=setTimeout(()=>startDrag(e),450);
     },{passive:true});
-    
+
     card.addEventListener('touchmove',e=>{
-      if(!isDragging)return;
+      if(!isDragging){
+        // Cancel long press if finger moves
+        clearTimeout(longPressTimer);
+        longPressTimer=null;
+        return;
+      }
       e.preventDefault();
-      const dy=e.touches[0].clientY-touchY;
-      if(clone)clone.style.top=(origRect.top+dy)+'px';
+      const dy=e.touches[0].clientY-touchStartY;
+      const dx=e.touches[0].clientX-touchStartX;
+      if(clone){
+        clone.style.top=(origRect.top+dy)+'px';
+        clone.style.left=(origRect.left+dx)+'px';
+      }
       const midY=e.touches[0].clientY;
       list.querySelectorAll('.ex-grid-card').forEach(c=>{
         if(c===card)return;
         const r=c.getBoundingClientRect();
         const cMid=r.top+r.height/2;
         if(Math.abs(midY-cMid)<r.height/2){
-          if(midY<cMid)c.before(card);else c.after(card);
+          if(midY<cMid)c.before(card);
+          else c.after(card);
         }
       });
     },{passive:false});
 
-    if(handle&&handle!==card){
+    card.addEventListener('touchend',endDrag,{passive:true});
+    card.addEventListener('touchcancel',endDrag,{passive:true});
+
+    const handle=card.querySelector('.drag-handle');
+    if(handle){
       handle.addEventListener('touchstart',e=>{
         touchY=e.touches[0].clientY;
         origRect=card.getBoundingClientRect();
