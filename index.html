@@ -2141,10 +2141,11 @@ function renderHistContent(){
         <div style="padding-top:12px;">${exDetail}${skillDetail}</div>
         ${s.bodyweight?`<div style="font-size:12px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;margin-bottom:10px;">⚖️ Bodyweight: ${s.bodyweight}kg</div>`:''}
         ${s.notes?`<div style="font-size:13px;color:var(--text-dim);font-style:italic;padding:8px 10px;background:var(--surface2);border-radius:6px;margin-bottom:12px;">"${s.notes}"</div>`:''}
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
           <button class="btn btn-secondary btn-sm btn-full" onclick="event.stopPropagation();openEditSession('${s.id}')">✏️ Edit</button>
           <button class="btn btn-danger btn-sm btn-full" onclick="event.stopPropagation();deleteSession('${s.id}')">🗑️ Delete</button>
         </div>
+        <button class="btn btn-secondary btn-sm btn-full" onclick="event.stopPropagation();useSessionAsTemplate('${s.id}')">📋 Use as Today's Workout</button>
       </div>
     </div>`;
     }).join('');
@@ -3531,6 +3532,33 @@ function setLegMode(exName, legSide) {
     initDragDrop();
   }
   showToast(isSL ? '🦵 ' + legSide + ' mode' : 'Both legs mode');
+}
+
+
+function useSessionAsTemplate(sessionId){
+  const d=load();
+  const session=d.sessions.find(s=>s.id===sessionId);
+  if(!session)return;
+  // Switch to log tab
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-log').classList.add('active');
+  document.querySelectorAll('.tab-btn')[1].classList.add('active');
+  // Set day and load exercises
+  logDay=session.dayId;
+  logExercises={};
+  cardCollapsed={};
+  selectedTile={};
+  (session.exercises||[]).forEach(ex=>{
+    if(ex.name&&ex.sets&&ex.sets.length){
+      logExercises[ex.name]=ex.sets.map(s=>({reps:s.reps||'',weight:s.weight||''}));
+      cardCollapsed[ex.name]=true;
+    }
+  });
+  clearDraft();
+  autosaveDraft();
+  renderLog();
+  showToast('📋 Loaded as today\'s workout!');
 }
 
 // ═══════════════════════════════════════════════
