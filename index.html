@@ -2065,13 +2065,14 @@ function renderProgContent(){
     if(heatmapFilter==='month') return days <= 31;
     return true;
   });
+  const heatmapBtns=['week','month','all'].map(f=>{
+    const labels={week:'This Week',month:'This Month',all:'All Time'};
+    const isActive=heatmapFilter===f;
+    return '<button onclick="setHeatmapFilter(\''+f+'\')" style="flex:1;padding:6px;border-radius:100px;border:1px solid '+(isActive?'var(--accent)':'var(--border)')+';background:'+(isActive?'var(--accent-dim)':'none')+';color:'+(isActive?'var(--accent)':'var(--text-dim)')+';font-family:Barlow Condensed,sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;">'+labels[f]+'</button>';
+  }).join('');
   html+=`<div class="section-label" style="cursor:pointer;" onclick="toggleProgSection('muscles')">🔥 Body Heatmap <span id="prog-chev-muscles" style="font-size:11px;color:var(--text-dim);">▼</span></div>
   <div id="prog-sec-muscles">
-    <div style="display:flex;gap:6px;margin-bottom:10px;">
-      <button onclick="setHeatmapFilter('week')" style="flex:1;padding:6px;border-radius:100px;border:1px solid ${heatmapFilter==='week'?'var(--accent)':'var(--border)'};background:${heatmapFilter==='week'?'var(--accent-dim)':'none'};color:${heatmapFilter==='week'?'var(--accent)':'var(--text-dim)'};font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;">This Week</button>
-      <button onclick="setHeatmapFilter('month')" style="flex:1;padding:6px;border-radius:100px;border:1px solid ${heatmapFilter==='month'?'var(--accent)':'var(--border)'};background:${heatmapFilter==='month'?'var(--accent-dim)':'none'};color:${heatmapFilter==='month'?'var(--accent)':'var(--text-dim)'};font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;">This Month</button>
-      <button onclick="setHeatmapFilter('all')" style="flex:1;padding:6px;border-radius:100px;border:1px solid ${heatmapFilter==='all'?'var(--accent)':'var(--border)'};background:${heatmapFilter==='all'?'var(--accent-dim)':'none'};color:${heatmapFilter==='all'?'var(--accent)':'var(--text-dim)'};font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;">All Time</button>
-    </div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">${heatmapBtns}</div>
     <div class="card" style="padding:14px;margin-bottom:12px;overflow-x:auto;">${buildDetailedHeatmap(heatmapSessions,user.color)}</div>`;
 
   html+=`</div>`; // close muscles section
