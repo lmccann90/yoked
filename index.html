@@ -374,10 +374,7 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
 
   <!-- PROGRESS -->
   <div class="page" id="page-progress">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <div class="page-title" style="margin-bottom:0;">GLOW <span>UP</span></div>
-      <button class="btn btn-secondary btn-sm" onclick="openMonthlyReport()">📊 Monthly</button>
-    </div>
+    <div class="page-title">GLOW <span>UP</span></div>
     <div class="user-pills" id="progress-user-pills"></div>
     <div id="progress-content"></div>
   </div>
@@ -1939,7 +1936,6 @@ function renderProgress(){
 function setProgUser(uid){activeUser=uid;renderProgress();}
 
 function renderProgContent(){
-  try {
   const d=load();
   const user=d.users.find(u=>u.id===activeUser);
   if(!user)return;
@@ -2059,22 +2055,7 @@ function renderProgContent(){
   }
 
   html+=`</div>`; // close pbs section
-  // Filter sessions for heatmap
-  const heatmapSessions = sessions.filter(s => {
-    const days = (now - new Date(s.date)) / (1000*60*60*24);
-    if(heatmapFilter==='week') return days <= 7;
-    if(heatmapFilter==='month') return days <= 31;
-    return true;
-  });
-  const heatmapBtns=['week','month','all'].map(f=>{
-    const labels={week:'This Week',month:'This Month',all:'All Time'};
-    const isActive=heatmapFilter===f;
-    return '<button onclick="setHeatmapFilter(\''+f+'\')" style="flex:1;padding:6px;border-radius:100px;border:1px solid '+(isActive?'var(--accent)':'var(--border)')+';background:'+(isActive?'var(--accent-dim)':'none')+';color:'+(isActive?'var(--accent)':'var(--text-dim)')+';font-family:Barlow Condensed,sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;">'+labels[f]+'</button>';
-  }).join('');
-  html+=`<div class="section-label" style="cursor:pointer;" onclick="toggleProgSection('muscles')">🔥 Body Heatmap <span id="prog-chev-muscles" style="font-size:11px;color:var(--text-dim);">▼</span></div>
-  <div id="prog-sec-muscles">
-    <div style="display:flex;gap:6px;margin-bottom:10px;">${heatmapBtns}</div>
-    <div class="card" style="padding:14px;margin-bottom:12px;overflow-x:auto;">${buildDetailedHeatmap(heatmapSessions,user.color)}</div>`;
+  html+=`<div class="section-label" style="cursor:pointer;" onclick="toggleProgSection('muscles')">🔥 Body Heatmap <span id="prog-chev-muscles" style="font-size:11px;color:var(--text-dim);">▼</span></div><div id="prog-sec-muscles"><div class="card" style="padding:14px;margin-bottom:12px;overflow-x:auto;">${buildDetailedHeatmap(sessions,user.color)}</div>`;
 
   html+=`</div>`; // close muscles section
   /* Session volume chart removed - was causing animation issues */
@@ -2093,10 +2074,6 @@ function renderProgContent(){
     topEx.forEach(([,history],i)=>{const ctx=document.getElementById(`ex-chart-${i}`)?.getContext('2d');if(ctx)progCharts.push(new Chart(ctx,{type:'line',data:{labels:history.map(h=>fmtShort(h.date)),datasets:[{data:history.map(h=>h.weight),borderColor:user.color,backgroundColor:user.color+'22',borderWidth:2,pointBackgroundColor:user.color,pointRadius:4,tension:0.3,fill:true}]},options:opts('kg')}));});
     if(bwSessions.length>=2){const ctx=document.getElementById('bw-chart')?.getContext('2d');if(ctx)progCharts.push(new Chart(ctx,{type:'line',data:{labels:bwSessions.map(s=>fmtShort(s.date)),datasets:[{data:bwSessions.map(s=>s.bodyweight),borderColor:'#ffffff55',backgroundColor:'#ffffff11',borderWidth:2,pointBackgroundColor:'#fff',pointRadius:3,tension:0.3,fill:true}]},options:opts('kg')}));}
   },50);
-  } catch(e) {
-    console.error('renderProgContent error:', e.message, e.stack);
-    document.getElementById('progress-content').innerHTML = '<div style="padding:20px;color:#ff4444;font-family:monospace;font-size:12px;">Error: '+e.message+'</div>';
-  }
 }
 
 // ═══════════════════════════════════════════════
@@ -2261,12 +2238,6 @@ let editUserId=null,editColor=null,editDays=[];
 // PROGRESS SECTION COLLAPSE
 // ═══════════════════════════════════════════════
 const progSectionState={};
-
-function setHeatmapFilter(filter) {
-  heatmapFilter = filter;
-  renderProgContent();
-}
-
 function toggleProgSection(id){
   const sec=document.getElementById('prog-sec-'+id);
   const chev=document.getElementById('prog-chev-'+id);
