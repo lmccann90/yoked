@@ -1939,6 +1939,7 @@ function renderProgress(){
 function setProgUser(uid){activeUser=uid;renderProgress();}
 
 function renderProgContent(){
+  try {
   const d=load();
   const user=d.users.find(u=>u.id===activeUser);
   if(!user)return;
@@ -2092,6 +2093,10 @@ function renderProgContent(){
     topEx.forEach(([,history],i)=>{const ctx=document.getElementById(`ex-chart-${i}`)?.getContext('2d');if(ctx)progCharts.push(new Chart(ctx,{type:'line',data:{labels:history.map(h=>fmtShort(h.date)),datasets:[{data:history.map(h=>h.weight),borderColor:user.color,backgroundColor:user.color+'22',borderWidth:2,pointBackgroundColor:user.color,pointRadius:4,tension:0.3,fill:true}]},options:opts('kg')}));});
     if(bwSessions.length>=2){const ctx=document.getElementById('bw-chart')?.getContext('2d');if(ctx)progCharts.push(new Chart(ctx,{type:'line',data:{labels:bwSessions.map(s=>fmtShort(s.date)),datasets:[{data:bwSessions.map(s=>s.bodyweight),borderColor:'#ffffff55',backgroundColor:'#ffffff11',borderWidth:2,pointBackgroundColor:'#fff',pointRadius:3,tension:0.3,fill:true}]},options:opts('kg')}));}
   },50);
+  } catch(e) {
+    console.error('renderProgContent error:', e.message, e.stack);
+    document.getElementById('progress-content').innerHTML = '<div style="padding:20px;color:#ff4444;font-family:monospace;font-size:12px;">Error: '+e.message+'</div>';
+  }
 }
 
 // ═══════════════════════════════════════════════
