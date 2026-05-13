@@ -374,7 +374,10 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
 
   <!-- PROGRESS -->
   <div class="page" id="page-progress">
-    <div class="page-title">GLOW <span>UP</span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="page-title" style="margin-bottom:0;">GLOW <span>UP</span></div>
+      <button class="btn btn-secondary btn-sm" onclick="openMonthlyReport()">📊 Monthly</button>
+    </div>
     <div class="user-pills" id="progress-user-pills"></div>
     <div id="progress-content"></div>
   </div>
@@ -2055,7 +2058,21 @@ function renderProgContent(){
   }
 
   html+=`</div>`; // close pbs section
-  html+=`<div class="section-label" style="cursor:pointer;" onclick="toggleProgSection('muscles')">🔥 Body Heatmap <span id="prog-chev-muscles" style="font-size:11px;color:var(--text-dim);">▼</span></div><div id="prog-sec-muscles"><div class="card" style="padding:14px;margin-bottom:12px;overflow-x:auto;">${buildDetailedHeatmap(sessions,user.color)}</div>`;
+  // Filter sessions for heatmap
+  const heatmapSessions = sessions.filter(s => {
+    const days = (now - new Date(s.date)) / (1000*60*60*24);
+    if(heatmapFilter==='week') return days <= 7;
+    if(heatmapFilter==='month') return days <= 31;
+    return true;
+  });
+  html+=`<div class="section-label" style="cursor:pointer;" onclick="toggleProgSection('muscles')">🔥 Body Heatmap <span id="prog-chev-muscles" style="font-size:11px;color:var(--text-dim);">▼</span></div>
+  <div id="prog-sec-muscles">
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button onclick="setHeatmapFilter('week')" style="flex:1;padding:6px;border-radius:100px;border:1px solid ${heatmapFilter==='week'?'var(--accent)':'var(--border)'};background:${heatmapFilter==='week'?'var(--accent-dim)':'none'};color:${heatmapFilter==='week'?'var(--accent)':'var(--text-dim)'};font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;">This Week</button>
+      <button onclick="setHeatmapFilter('month')" style="flex:1;padding:6px;border-radius:100px;border:1px solid ${heatmapFilter==='month'?'var(--accent)':'var(--border)'};background:${heatmapFilter==='month'?'var(--accent-dim)':'none'};color:${heatmapFilter==='month'?'var(--accent)':'var(--text-dim)'};font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;">This Month</button>
+      <button onclick="setHeatmapFilter('all')" style="flex:1;padding:6px;border-radius:100px;border:1px solid ${heatmapFilter==='all'?'var(--accent)':'var(--border)'};background:${heatmapFilter==='all'?'var(--accent-dim)':'none'};color:${heatmapFilter==='all'?'var(--accent)':'var(--text-dim)'};font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;">All Time</button>
+    </div>
+    <div class="card" style="padding:14px;margin-bottom:12px;overflow-x:auto;">${buildDetailedHeatmap(heatmapSessions,user.color)}</div>`;
 
   html+=`</div>`; // close muscles section
   /* Session volume chart removed - was causing animation issues */
@@ -2238,6 +2255,12 @@ let editUserId=null,editColor=null,editDays=[];
 // PROGRESS SECTION COLLAPSE
 // ═══════════════════════════════════════════════
 const progSectionState={};
+
+function setHeatmapFilter(filter) {
+  heatmapFilter = filter;
+  renderProgContent();
+}
+
 function toggleProgSection(id){
   const sec=document.getElementById('prog-sec-'+id);
   const chev=document.getElementById('prog-chev-'+id);
