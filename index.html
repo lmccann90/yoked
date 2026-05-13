@@ -2,6 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="YOKED">
+<meta name="theme-color" content="#0a0a0a">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>YOKED</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
@@ -30,7 +36,7 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
 .tab-bar{height:var(--tab-h);background:rgba(13,13,13,0.97);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(6,1fr);flex-shrink:0;backdrop-filter:blur(20px);padding-bottom:env(safe-area-inset-bottom);}
 .tab-btn.timer-active{color:#ff6b35;}
 .tab-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;cursor:pointer;color:var(--text-dim);transition:color 0.15s;padding:8px 4px;}
-.tab-btn.active{color:var(--accent);}
+.tab-btn.active{color:var(--accent);transform:translateY(-1px);}
 .tab-icon{font-size:20px;line-height:1;}
 .tab-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:1px;text-transform:uppercase;}
 
@@ -39,7 +45,7 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
 .page-title span{color:var(--accent);}
 
 /* CARDS */
-.card{background:var(--surface);border:1px solid #353535;border-radius:var(--radius);overflow:hidden;margin-bottom:12px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;box-shadow:var(--card-shadow);}
 .card-header{padding:12px 16px;background:var(--surface2);font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);display:flex;align-items:center;justify-content:space-between;}
 
 /* BEAST CARDS */
@@ -298,11 +304,11 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
 
 /* 2-COL EXERCISE GRID */
 .ex-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
-.ex-grid-card{background:var(--surface2);border:1px solid #404040;border-radius:12px;padding:14px 12px;cursor:pointer;transition:all 0.15s;}
+.ex-grid-card{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:15px 14px;cursor:pointer;transition:all 0.15s;box-shadow:0 1px 6px rgba(0,0,0,0.3);}
 .ex-grid-card.expanded{background:#0d110a;border:2px solid var(--accent);grid-column:1/-1;}
 .ex-grid-card:active{opacity:0.85;}
-.ex-grid-card-name{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:#d0d0d0;font-weight:600;margin-bottom:4px;}
-.ex-grid-card-sub{font-size:11px;color:#666;letter-spacing:1px;}
+.ex-grid-card-name{font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:1px;text-transform:uppercase;color:#e0e0e0;font-weight:700;margin-bottom:4px;}
+.ex-grid-card-sub{font-size:12px;color:#686868;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;}
 .ex-grid-card.expanded .ex-grid-card-name{color:var(--accent);}
 .ex-grid-card.has-data .ex-grid-card-sub{color:#4ade80;}
 .ex-grid-add{background:var(--surface2);border:1px dashed #404040;border-radius:12px;padding:14px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}
@@ -326,6 +332,10 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
 .sed-title{font-size:9px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
 .sed-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
 .sed-label{font-size:9px;color:#585858;letter-spacing:1px;text-align:center;margin-bottom:4px;text-transform:uppercase;}
+
+/* TIMED EXERCISES */
+.time-input-group{display:flex;align-items:center;gap:8px;}
+.time-display{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--accent);letter-spacing:2px;min-width:80px;text-align:center;}
 </style>
 </head>
 <body>
@@ -333,7 +343,10 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
 <div class="app-header">
   <span class="wordmark">YOKED</span>
   <span class="wordmark-sub">No Days Off</span>
-  <button onclick="openWiki()" style="margin-left:auto;background:var(--surface2);border:1px solid #404040;border-radius:var(--radius-sm);padding:6px 14px;color:var(--text-mid);font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:1px;cursor:pointer;">📖 Wiki</button>
+  <div style="display:flex;gap:6px;margin-left:auto;">
+    <button onclick="openTemplatesManager()" style="background:var(--surface2);border:1px solid #404040;border-radius:var(--radius-sm);padding:6px 12px;color:var(--text-mid);font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;">📋 Templates</button>
+    <button onclick="openWiki()" style="background:var(--surface2);border:1px solid #404040;border-radius:var(--radius-sm);padding:6px 12px;color:var(--text-mid);font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;">📖 Wiki</button>
+  </div>
 </div>
 
 <div class="scroll-area" id="main-scroll">
@@ -908,10 +921,14 @@ function renderHome(){
       const nextLabel=next?`${next.icon} ${next.name}`:'—';
       const isOverride=!!u.nextDayOverride;
       return `<div class="beast-card" style="--beast-color:${u.color}">
-        <div class="beast-avatar" onclick="goProgress('${u.id}')" style="cursor:pointer;">${u.avatar||u.name[0]}</div>
+        <div onclick="goProgress('${u.id}')" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <div style="font-size:28px;">${u.avatar||u.name[0]}</div>
+          <div>${drawStickFigureSmall(getUserLevel(getUserXP(load(),u.id)).level)}</div>
+        </div>
         <div class="beast-info" onclick="goProgress('${u.id}')" style="cursor:pointer;">
           <div class="beast-name">${u.name}</div>
           <div class="beast-goal">${u.goal||'No goal set'}</div>
+          ${getXPBar(u.id)}
           <div class="beast-stats">
             <div><div class="beast-stat-val">${sessions.length}</div><div class="beast-stat-label">Sessions</div></div>
             <div><div class="beast-stat-val" style="color:#ff6b35">${streak}w</div><div class="beast-stat-label">Streak 🔥</div></div>
@@ -1151,7 +1168,7 @@ function renderExCard(exName,sets,prevSets,pb){
   const sid=safeId(exName);
   const isExpanded=cardCollapsed[exName]===false;
   const maxW=Math.max(...sets.map(s=>parseFloat(s.weight)||0));
-  const isPB=maxW>0&&(!pb||maxW>pb.weight);
+  const isPB=maxW>0&&pb&&maxW>pb.weight;
   const hasAnyData=sets.some(s=>s.reps||s.weight);
   const filledSets=sets.filter(s=>s.reps||s.weight).length;
   const isSL=sets[0]?.singleLeg;
@@ -1542,25 +1559,15 @@ function addExerciseByName(name){
   if(suggestions)suggestions.innerHTML='';
   logExercises[name]=[{reps:'',weight:''}];
   cardCollapsed[name]=false;
-  selectedTile[name]=0;
   updateExOrder();
   autosaveDraft();
-  const existing=document.getElementById('ex-list');
-  if(existing){
-    const d2=load();
-    const pbs=getPBs(d2,activeUser);
-    const div=document.createElement('div');
-    div.innerHTML=renderExGridCard(name,[{reps:'',weight:''}],[],pbs[name.toLowerCase()]);
-    const addCard=existing.querySelector('.ex-grid-add');
-    if(addCard)existing.insertBefore(div.firstChild,addCard);
-    else existing.appendChild(div.firstChild);
-    initDragDrop();
-  }
+  // Re-render the whole log content to ensure exercise appears
+  renderLogContent();
   showToast('✅ '+name+' added!');
   setTimeout(()=>{
     const el=document.getElementById('excard-'+safeId(name));
     if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});
-  },100);
+  },150);
 }
 
 function addAdHoc(){
@@ -1618,10 +1625,12 @@ function selectDay(dayId){
 
 function checkPB(exName){
   const d=load();
-  const pb=(getPBs(d,activeUser)||{})[exName.toLowerCase()];
+  const allPBs=getPBs(d,activeUser)||{};
+  const pb=allPBs[exName.toLowerCase()];
+  // Only flag as PB if exercise has been done before (has existing PB record)
   const sets=logExercises[exName]||[];
   const maxW=Math.max(...sets.map(s=>parseFloat(s.weight)||0));
-  const isPB=maxW>0&&(!pb||maxW>pb.weight);
+  const isPB=maxW>0&&pb&&maxW>pb.weight;
   const card=document.getElementById('excard-'+safeId(exName));
   if(!card)return;
   const nameEl=card.querySelector('.ex-card-name');
@@ -1674,6 +1683,9 @@ function saveSession(){
 
   if(newPBs.length)showToast('🏆 '+newPBs.length+' new PB'+(newPBs.length>1?'s':'')+'! '+newPBs.map(p=>p.exercise).join(', '));
   else showToast('✅ Session saved!');
+  // Award XP
+  awardXP(activeUser, 10, 'Session logged');
+  newPBs.forEach(()=>awardXP(activeUser, 25, 'New PB'));
 
   clearDraft();
   logDay=null;logExercises={};cardCollapsed={};selectedTile={};
@@ -1957,7 +1969,7 @@ function renderProgContent(){
         if(n.includes('pull')||n.includes('lat')||n.includes('row'))musclesHit.add('Lats');
         if(n.includes('bicep')||n.includes('curl'))musclesHit.add('Biceps');
         if(n.includes('calf'))musclesHit.add('Calves');
-        if(n.includes('core')||n.includes('sit up')||n.includes('plank'))musclesHit.add('Core');
+        if(n.includes('core')||n.includes('sit up')||n.includes('situp')||n.includes('plank')||n.includes('crunch')||n.includes('ab '))musclesHit.add('Core');
       });
     }
   });
@@ -2043,7 +2055,7 @@ function renderProgContent(){
   }
 
   html+=`</div>`; // close pbs section
-  html+=`<div class="section-label" style="cursor:pointer;" onclick="toggleProgSection('muscles')">🔥 Muscles This Week <span id="prog-chev-muscles" style="font-size:11px;color:var(--text-dim);">▼</span></div><div id="prog-sec-muscles"><div class="card" style="padding:14px;margin-bottom:12px;"><div class="heatmap-grid">${MUSCLES.map(m=>{const hit=musclesHit.has(m);return '<div class="muscle-chip" style="background:'+(hit?user.color+'22':'var(--surface2)')+';border:1px solid '+(hit?user.color:'var(--border)')+';color:'+(hit?user.color:'var(--text-dim)')+';">'+(hit?'✓':' ')+' '+m+'</div>';}).join('')}</div></div>`;
+  html+=`<div class="section-label" style="cursor:pointer;" onclick="toggleProgSection('muscles')">🔥 Body Heatmap <span id="prog-chev-muscles" style="font-size:11px;color:var(--text-dim);">▼</span></div><div id="prog-sec-muscles"><div class="card" style="padding:14px;margin-bottom:12px;overflow-x:auto;">${buildDetailedHeatmap(sessions,user.color)}</div>`;
 
   html+=`</div>`; // close muscles section
   /* Session volume chart removed - was causing animation issues */
@@ -2460,7 +2472,23 @@ const WIKI_EXERCISES = [{"id": "bench_press", "name": "Bench Press", "category":
   {"id": "dip_ex", "name": "Dips", "category": "Push", "equipment": "Bodyweight/Weighted", "primary": ["Triceps", "Lower Chest"], "secondary": ["Shoulders", "Core"], "steps": ["Support on parallel bars", "Lower body by bending elbows", "Keep slight forward lean", "Press back up"], "cues": ["Don't go too deep if shoulders complain", "Control the descent"], "tips": ["Upright torso = tricep dominant", "Forward lean = chest dominant", "One of the best upper body mass builders"], "youtube": "https://www.youtube.com/watch?v=2z8JmcrW-As"},
   {"id": "glute_kickback_ex", "name": "Glute Kickbacks", "category": "Glutes", "equipment": "Cable/Machine", "primary": ["Glutes"], "secondary": ["Hamstrings"], "steps": ["Attach ankle cuff to cable", "Kick leg back and up squeezing glute", "Control return"], "cues": ["Squeeze and pause at top", "Don't swing \u2014 control the movement", "Slight forward lean helps"], "tips": ["Great for upper glute and glute medius", "Pause at peak contraction for max activation"], "youtube": "https://www.youtube.com/watch?v=Ex39mS4E-8c"},
   {"id": "hack_squat_ex", "name": "Hack Squats", "category": "Legs", "equipment": "Machine", "primary": ["Quads"], "secondary": ["Glutes", "Hamstrings"], "steps": ["Position on machine, shoulders under pads", "Lower to full depth", "Press back up"], "cues": ["Don't let knees cave", "Full depth for maximum quad activation", "Keep back against pad"], "tips": ["More quad focused than leg press", "Feet lower on plate = more quad", "Great for building quad sweep"], "youtube": "https://www.youtube.com/watch?v=0tn5K9NlCfo"},
-  {"id": "hamstring_curl_ex", "name": "Hamstring Curls", "category": "Glutes", "equipment": "Machine", "primary": ["Hamstrings"], "secondary": ["Calves"], "steps": ["Lie face down, pad above ankles", "Curl heels toward glutes", "Squeeze at top", "Lower slowly"], "cues": ["Hips stay flat \u2014 press them down", "Full range both ways", "Control the descent"], "tips": ["Slow negative is where gains are", "Ankle pad should be just above ankle bone"], "youtube": "https://www.youtube.com/watch?v=1Tq3QdYUuHs"}];
+  {"id": "hamstring_curl_ex", "name": "Hamstring Curls", "category": "Glutes", "equipment": "Machine", "primary": ["Hamstrings"], "secondary": ["Calves"], "steps": ["Lie face down, pad above ankles", "Curl heels toward glutes", "Squeeze at top", "Lower slowly"], "cues": ["Hips stay flat \u2014 press them down", "Full range both ways", "Control the descent"], "tips": ["Slow negative is where gains are", "Ankle pad should be just above ankle bone"], "youtube": "https://www.youtube.com/watch?v=1Tq3QdYUuHs"},
+  {"id": "sissy_squat", "name": "Sissy Squat", "category": "Legs", "equipment": "Bodyweight", "primary": ["Quads", "Rectus Femoris"], "secondary": ["Hip Flexors", "Core"], "steps": ["Hold onto something for balance", "Rise onto toes", "Lean back and lower knees toward floor", "Keep torso and upper legs in line", "Return to start"], "cues": ["Knees travel forward over toes \u2014 that's the point", "Keep hips extended throughout", "Don't let torso break at hips"], "tips": ["Incredible rectus femoris isolation", "Looks ridiculous, works brilliantly", "Start with small range and build up", "The teardrop quad shape exercise"], "youtube": "https://www.youtube.com/watch?v=OoRSCmhHxBk"},
+  {"id": "front_squat", "name": "Front Squat", "category": "Legs", "equipment": "Barbell", "primary": ["Quads"], "secondary": ["Core", "Glutes", "Upper Back"], "steps": ["Bar rests on front of shoulders, fingertips under bar", "Elbows high throughout", "Squat down staying very upright", "Drive through floor to stand"], "cues": ["ELBOWS UP \u2014 if they drop the bar falls", "More upright torso than back squat", "Requires good wrist and shoulder flexibility"], "tips": ["More quad dominant than back squat", "Harder to cheat \u2014 very honest movement", "Cross-arm grip is easier on wrists than clean grip"], "youtube": "https://www.youtube.com/watch?v=m4ytmJcPNmM"},
+  {"id": "wrist_curl", "name": "Wrist Curl", "category": "Arms", "equipment": "Barbell/Dumbbell", "primary": ["Forearm Flexors"], "secondary": ["Grip"], "steps": ["Sit with forearms resting on thighs or bench", "Wrists hanging over edge, palms up", "Curl wrists upward", "Lower with control"], "cues": ["Only the wrist moves \u2014 forearms stay still", "Full range of motion", "Control the negative"], "tips": ["Great for wrist stability and injury prevention", "High reps work well \u2014 15-20", "Pairs well with reverse curls"], "youtube": "https://www.youtube.com/watch?v=4REhH7p5r00"},
+  {"id": "behind_back_wrist_curl", "name": "Behind the Back Wrist Curl", "category": "Arms", "equipment": "Barbell", "primary": ["Forearm Extensors", "Grip"], "secondary": ["Forearm Flexors"], "steps": ["Hold barbell behind back with overhand grip", "Curl wrists upward", "Lower with control \u2014 let bar roll to fingertips for extra range"], "cues": ["Keep arms straight throughout", "Let the bar roll down fingers for full range", "Constant tension through the movement"], "tips": ["Cathal's favourite for forearm and grip strength", "Overhand grip hits extensors more than regular wrist curl", "Excellent for pull up grip strength"], "youtube": "https://www.youtube.com/watch?v=RsGNO1OO0vM"},
+  {"id": "reverse_curl", "name": "Reverse Curl", "category": "Arms", "equipment": "Barbell/Dumbbell", "primary": ["Brachioradialis", "Forearm Extensors"], "secondary": ["Biceps", "Brachialis"], "steps": ["Grip bar with overhand (pronated) grip", "Curl to chin height keeping overhand grip throughout", "Lower with control"], "cues": ["Overhand grip throughout \u2014 don't rotate", "Elbows stay at sides", "Full range of motion"], "tips": ["Best exercise for brachioradialis \u2014 the forearm muscle that shows on top", "Directly helps with pull up and deadlift grip", "Harder than regular curls \u2014 use lighter weight"], "youtube": "https://www.youtube.com/watch?v=nwMiJR35OXY"},
+  {"id": "zottman_curl", "name": "Zottman Curl", "category": "Arms", "equipment": "Dumbbell", "primary": ["Biceps", "Brachioradialis"], "secondary": ["Brachialis", "Forearm Extensors"], "steps": ["Start with palms up (supinated grip)", "Curl up normally \u2014 squeeze bicep at top", "At the top rotate to palms down (pronated)", "Lower slowly with overhand grip"], "cues": ["Slow on the way down \u2014 that's the whole point", "Full rotation at the top", "Control the eccentric completely"], "tips": ["Trains both bicep curl and reverse curl in one movement", "The slow pronated negative is where the forearm work happens", "Named after George Zottman, 1800s strongman"], "youtube": "https://www.youtube.com/watch?v=ZrpBQDEhUuY"},
+  {"id": "frog_pump", "name": "Frog Pump", "category": "Glutes", "equipment": "Bodyweight/Resistance Band", "primary": ["Glutes"], "secondary": ["Hip Abductors", "Core"], "steps": ["Lie on back, soles of feet together, knees out wide", "Drive hips up by squeezing glutes", "Pause at top", "Lower and repeat"], "cues": ["Feet together knees out \u2014 frog position is the whole point", "Squeeze HARD at the top", "Tuck pelvis at the top for maximum glute activation"], "tips": ["Incredible glute activation despite looking easy", "The frog position puts glutes in a shortened position \u2014 different stimulus", "Add band above knees to make harder", "Great warm up or finisher"], "youtube": "https://www.youtube.com/watch?v=7_MYHBwBh3s"},
+  {"id": "cable_pull_through", "name": "Cable Pull Through", "category": "Glutes", "equipment": "Cable", "primary": ["Glutes", "Hamstrings"], "secondary": ["Spinal Erectors", "Core"], "steps": ["Cable at floor height, rope attachment", "Stand facing away from cable", "Hinge forward reaching through legs for rope", "Drive hips forward to return"], "cues": ["This is a HIP HINGE \u2014 hips back not down", "Reach through legs as far as comfortable", "Squeeze glutes hard at the top"], "tips": ["Very hip thrust-like movement but standing", "Great for learning hip hinge pattern", "Cable provides constant tension unlike barbell"], "youtube": "https://www.youtube.com/watch?v=tJqwMIV6UuE"},
+  {"id": "copenhagen_plank", "name": "Copenhagen Plank", "category": "Core", "equipment": "Bench", "primary": ["Adductors", "Core", "Obliques"], "secondary": ["Glutes", "Hip Abductors"], "steps": ["Side plank position, top leg resting on bench", "Bottom leg hangs or touches floor lightly", "Hold position keeping hips up"], "cues": ["Hips stay level \u2014 don't let them drop", "This is brutal \u2014 start with short holds", "The inner thigh is working very hard"], "tips": ["One of the best adductor exercises in existence", "Trains inner thigh AND core at same time", "Great for groin injury prevention", "Start with 3x10-15 seconds"], "youtube": "https://www.youtube.com/watch?v=rnmqCHNJKr8"},
+  {"id": "inverted_row", "name": "Inverted Row", "category": "Pull", "equipment": "Barbell/TRX", "primary": ["Rhomboids", "Lats"], "secondary": ["Biceps", "Rear Delts", "Core"], "steps": ["Bar set at hip height in rack, hang underneath", "Body straight, heels on floor", "Pull chest to bar squeezing shoulder blades", "Lower with control"], "cues": ["Body stays straight \u2014 don't let hips sag", "Squeeze shoulder blades together at top", "The harder you make the angle the harder it is"], "tips": ["Great stepping stone to pull ups", "Easier than pull ups but same movement pattern", "Make harder by elevating feet"], "youtube": "https://www.youtube.com/watch?v=dvkIaarnf0g"},
+  {"id": "band_pull_apart", "name": "Band Pull Apart", "category": "Pull", "equipment": "Resistance Band", "primary": ["Rear Delts", "Rhomboids"], "secondary": ["External Rotators", "Mid Traps"], "steps": ["Hold band in front at shoulder height, hands shoulder width", "Pull band apart until arms are wide", "Control return"], "cues": ["Keep arms straight throughout", "Pull APART not down", "Squeeze shoulder blades at the end"], "tips": ["Incredible for shoulder health and posture", "Do these daily \u2014 very low fatigue", "Great warm up for any upper body session", "Directly helps with pull ups"], "youtube": "https://www.youtube.com/watch?v=C3LP-p5zERs"},
+  {"id": "bear_crawl", "name": "Bear Crawl", "category": "Core", "equipment": "Bodyweight", "primary": ["Core", "Shoulders"], "secondary": ["Quads", "Hip Flexors", "Triceps"], "steps": ["On all fours, knees hovering 2cm off floor", "Move opposite hand and foot forward together", "Keep back flat and hips level", "Move slowly and controlled"], "cues": ["Hips stay level \u2014 don't rock side to side", "Knees hover \u2014 don't touch the floor", "Slow is harder and better"], "tips": ["Trains anti-rotation core stability", "Surprisingly difficult \u2014 humbling", "Great conditioning and core work combined"], "youtube": "https://www.youtube.com/watch?v=D3pCALWe5jg"},
+  {"id": "stir_the_pot", "name": "Stir the Pot", "category": "Core", "equipment": "Swiss Ball", "primary": ["Core", "Transverse Abdominis"], "secondary": ["Shoulders", "Obliques"], "steps": ["Forearms on Swiss ball, plank position", "Make small circles with your forearms on the ball", "Alternate direction each set"], "cues": ["Body stays completely still \u2014 only arms move", "Small circles \u2014 big circles are cheating", "Brace everything"], "tips": ["Brutal core stability exercise", "The instability of the ball makes plank much harder", "Start with very small circles"], "youtube": "https://www.youtube.com/watch?v=1gVwP5_5c0Y"},
+  {"id": "paused_squat", "name": "Paused Squat", "category": "Legs", "equipment": "Barbell", "primary": ["Quads", "Glutes"], "secondary": ["Hamstrings", "Core"], "steps": ["Squat down to parallel", "PAUSE for 2-3 seconds at the bottom \u2014 no bouncing", "Drive up without any momentum"], "cues": ["The pause removes the stretch reflex \u2014 must use pure strength", "Stay braced throughout the pause", "Don't relax at the bottom"], "tips": ["Builds raw strength out of the hole", "Eliminates bouncing out of the bottom", "Great for fixing sticking points in the squat"], "youtube": "https://www.youtube.com/watch?v=wUHNLbFNwqo"},
+  {"id": "box_squat", "name": "Box Squat", "category": "Legs", "equipment": "Barbell", "primary": ["Quads", "Glutes"], "secondary": ["Hamstrings", "Core"], "steps": ["Set box to parallel height behind you", "Squat back onto box \u2014 sit back not down", "Pause briefly on box", "Drive up through floor"], "cues": ["Sit BACK \u2014 hips go back first", "Brief pause on box \u2014 don't relax completely", "Drive knees out"], "tips": ["Teaches proper hip hinge in squat", "Great for quad and posterior chain power", "Used heavily in powerlifting training"], "youtube": "https://www.youtube.com/watch?v=dcq0bAN0I4M"},
+  {"id": "l_sit", "name": "L-Sit Hold", "category": "Core", "equipment": "Parallel Bars/Floor", "primary": ["Core", "Hip Flexors"], "secondary": ["Triceps", "Shoulders", "Quads"], "steps": ["Support on parallel bars or floor", "Extend legs straight out in front \u2014 parallel to floor", "Hold position as long as possible"], "cues": ["Legs must be straight and parallel to floor", "Depress shoulders \u2014 don't shrug", "Point toes"], "tips": ["Gymnastics fundamental \u2014 incredibly hard", "Start with tuck L-sit (knees bent) and progress", "Builds serious core and hip flexor strength"], "youtube": "https://www.youtube.com/watch?v=IUZJoSP66HI"}];
 
 const MUSCLE_COLORS = {
   'Chest':'#ff6b35','Upper Chest':'#ff6b35','Lower Chest':'#ff8855',
@@ -3018,6 +3046,522 @@ function closeSnake(){
 }
 
 
+
+
+// ═══════════════════════════════════════════════
+// XP + STICK FIGURE TAMAGOTCHI
+// ═══════════════════════════════════════════════
+const XP_LEVELS = [
+  {level:1, name:'Beginner',    xpRequired:0,   description:'Just starting out'},
+  {level:2, name:'Novice',      xpRequired:100,  description:'Getting into it'},
+  {level:3, name:'Regular',     xpRequired:250,  description:'Showing up consistently'},
+  {level:4, name:'Athlete',     xpRequired:500,  description:'Serious about training'},
+  {level:5, name:'Advanced',    xpRequired:800,  description:'Pushing hard'},
+  {level:6, name:'Elite',       xpRequired:1200, description:'Top level dedication'},
+  {level:7, name:'YOKED',       xpRequired:1800, description:'Absolutely massive'},
+];
+
+const LEVEL_UP_DANCES = [
+  'floss', 'orangejustice', 'worm', 'griddy', 'disco', 'robot', 'shuffle'
+];
+
+function getUserXP(d, uid) {
+  return (d.xp || {})[uid] || 0;
+}
+
+function getUserLevel(xp) {
+  let level = XP_LEVELS[0];
+  for (const l of XP_LEVELS) {
+    if (xp >= l.xpRequired) level = l;
+  }
+  return level;
+}
+
+function getNextLevel(xp) {
+  for (const l of XP_LEVELS) {
+    if (xp < l.xpRequired) return l;
+  }
+  return null;
+}
+
+function awardXP(uid, amount, reason) {
+  const d = load();
+  if (!d.xp) d.xp = {};
+  const oldXP = d.xp[uid] || 0;
+  const oldLevel = getUserLevel(oldXP);
+  d.xp[uid] = oldXP + amount;
+  const newLevel = getUserLevel(d.xp[uid]);
+  save(d);
+  if (newLevel.level > oldLevel.level) {
+    showLevelUp(uid, newLevel);
+  }
+}
+
+function showLevelUp(uid, level) {
+  const d = load();
+  const user = d.users.find(u => u.id === uid);
+  const dance = LEVEL_UP_DANCES[level.level % LEVEL_UP_DANCES.length];
+  
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="text-align:center;padding:32px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:4px;color:var(--text-dim);margin-bottom:8px;">LEVEL UP!</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:4px;color:var(--accent);margin-bottom:4px;">${level.name}</div>
+      <div style="font-size:14px;color:var(--text-mid);margin-bottom:32px;">${level.description}</div>
+      <div id="levelup-creature" style="margin:0 auto 24px;">${drawStickFigure(level.level, dance)}</div>
+      <button onclick="this.closest('div[style]').remove()" style="background:var(--accent);border:none;color:#000;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;padding:12px 32px;border-radius:100px;cursor:pointer;">LETS GO! 💪</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  
+  // Animate the stick figure
+  animateStickFigure(dance);
+  
+  setTimeout(() => overlay.remove(), 8000);
+}
+
+function drawStickFigure(level, pose) {
+  // Muscle sizes scale with level
+  const m = level; // muscle multiplier
+  const armW = 3 + m * 1.5;
+  const legW = 3 + m * 1.5;
+  const bodyW = 20 + m * 8;
+  const shoulderW = 30 + m * 12;
+  
+  let poseTransform = '';
+  let extraElements = '';
+  
+  if (pose === 'floss') {
+    poseTransform = 'rotate(-5deg)';
+    extraElements = `<line x1="60" y1="80" x2="20" y2="60" stroke="#c8ff00" stroke-width="${armW}" stroke-linecap="round"/>
+                     <line x1="60" y1="80" x2="100" y2="100" stroke="#c8ff00" stroke-width="${armW}" stroke-linecap="round"/>`;
+  } else if (pose === 'griddy') {
+    extraElements = `<line x1="60" y1="80" x2="30" y2="55" stroke="#c8ff00" stroke-width="${armW}" stroke-linecap="round"/>
+                     <line x1="60" y1="80" x2="90" y2="55" stroke="#c8ff00" stroke-width="${armW}" stroke-linecap="round"/>`;
+  } else if (pose === 'disco') {
+    extraElements = `<line x1="60" y1="80" x2="90" y2="50" stroke="#c8ff00" stroke-width="${armW}" stroke-linecap="round"/>
+                     <line x1="60" y1="80" x2="40" y2="90" stroke="#c8ff00" stroke-width="${armW}" stroke-linecap="round"/>`;
+  } else {
+    // Default flex pose
+    extraElements = `<line x1="60" y1="80" x2="20" y2="55" stroke="#c8ff00" stroke-width="${armW}" stroke-linecap="round"/>
+                     <line x1="20" y1="55" x2="15" y2="35" stroke="#c8ff00" stroke-width="${armW*0.8}" stroke-linecap="round"/>
+                     <line x1="60" y1="80" x2="100" y2="55" stroke="#c8ff00" stroke-width="${armW}" stroke-linecap="round"/>
+                     <line x1="100" y1="55" x2="105" y2="35" stroke="#c8ff00" stroke-width="${armW*0.8}" stroke-linecap="round"/>
+                     ${m >= 4 ? `<circle cx="18" cy="40" r="${m*3}" fill="#c8ff0033" stroke="#c8ff00" stroke-width="1.5"/>
+                     <circle cx="102" cy="40" r="${m*3}" fill="#c8ff0033" stroke="#c8ff00" stroke-width="1.5"/>` : ''}`;
+  }
+  
+  return `<svg viewBox="0 0 120 200" width="120" height="200" id="stickfig-svg" style="transform:${poseTransform}">
+    <!-- Head -->
+    <circle cx="60" cy="25" r="${10 + (m > 5 ? 2 : 0)}" fill="none" stroke="#c8ff00" stroke-width="${2 + m*0.3}"/>
+    ${m >= 5 ? '<circle cx="56" cy="22" r="2" fill="#c8ff00"/><circle cx="64" cy="22" r="2" fill="#c8ff00"/><path d="M54 29 Q60 33 66 29" stroke="#c8ff00" stroke-width="1.5" fill="none"/>' : ''}
+    <!-- Neck -->
+    <line x1="60" y1="35" x2="60" y2="45" stroke="#c8ff00" stroke-width="${2+m*0.3}" stroke-linecap="round"/>
+    <!-- Shoulders/Body -->
+    <line x1="${60-shoulderW/2}" y1="50" x2="${60+shoulderW/2}" y2="50" stroke="#c8ff00" stroke-width="${armW*1.2}" stroke-linecap="round"/>
+    <!-- Torso -->
+    <rect x="${60-bodyW/2}" y="50" width="${bodyW}" height="${30+m*3}" rx="4" fill="none" stroke="#c8ff00" stroke-width="${2+m*0.5}"/>
+    ${m >= 3 ? `<line x1="60" y1="55" x2="60" y2="${80+m*3}" stroke="#c8ff0060" stroke-width="1"/>` : ''}
+    ${m >= 4 ? `<line x1="${60-bodyW/2+4}" y1="60" x2="${60+bodyW/2-4}" y2="60" stroke="#c8ff0040" stroke-width="1"/>` : ''}
+    <!-- Arms -->
+    ${extraElements}
+    <!-- Legs -->
+    <line x1="60" y1="${80+m*3}" x2="40" y2="150" stroke="#c8ff00" stroke-width="${legW}" stroke-linecap="round"/>
+    <line x1="60" y1="${80+m*3}" x2="80" y2="150" stroke="#c8ff00" stroke-width="${legW}" stroke-linecap="round"/>
+    <!-- Feet -->
+    <line x1="40" y1="150" x2="30" y2="165" stroke="#c8ff00" stroke-width="${legW*0.8}" stroke-linecap="round"/>
+    <line x1="80" y1="150" x2="90" y2="165" stroke="#c8ff00" stroke-width="${legW*0.8}" stroke-linecap="round"/>
+    ${m >= 6 ? '<text x="60" y="185" text-anchor="middle" font-size="10" fill="#c8ff00" font-family="Barlow Condensed">YOKED</text>' : ''}
+  </svg>`;
+}
+
+function drawStickFigureSmall(level) {
+  const m = level;
+  const armW = 2 + m * 0.8;
+  const bodyW = 12 + m * 4;
+  const shoulderW = 18 + m * 6;
+  
+  return `<svg viewBox="0 0 60 100" width="40" height="60">
+    <circle cx="30" cy="12" r="${5 + (m > 5 ? 1 : 0)}" fill="none" stroke="#c8ff00" stroke-width="1.5"/>
+    <line x1="30" y1="18" x2="30" y2="24" stroke="#c8ff00" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="${30-shoulderW/2}" y1="26" x2="${30+shoulderW/2}" y2="26" stroke="#c8ff00" stroke-width="${armW}" stroke-linecap="round"/>
+    <rect x="${30-bodyW/2}" y="26" width="${bodyW}" height="${16+m}" rx="3" fill="none" stroke="#c8ff00" stroke-width="1.5"/>
+    <line x1="${30-shoulderW/2}" y1="26" x2="${30-shoulderW/2-4}" y2="20" stroke="#c8ff00" stroke-width="${armW*0.8}" stroke-linecap="round"/>
+    <line x1="${30+shoulderW/2}" y1="26" x2="${30+shoulderW/2+4}" y2="20" stroke="#c8ff00" stroke-width="${armW*0.8}" stroke-linecap="round"/>
+    <line x1="30" y1="${42+m}" x2="20" y2="72" stroke="#c8ff00" stroke-width="${armW}" stroke-linecap="round"/>
+    <line x1="30" y1="${42+m}" x2="40" y2="72" stroke="#c8ff00" stroke-width="${armW}" stroke-linecap="round"/>
+    <line x1="20" y1="72" x2="15" y2="82" stroke="#c8ff00" stroke-width="${armW*0.8}" stroke-linecap="round"/>
+    <line x1="40" y1="72" x2="45" y2="82" stroke="#c8ff00" stroke-width="${armW*0.8}" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function animateStickFigure(dance) {
+  const svg = document.getElementById('stickfig-svg');
+  if (!svg) return;
+  let frame = 0;
+  const anim = setInterval(() => {
+    frame++;
+    const bounce = Math.sin(frame * 0.3) * 5;
+    const rotate = Math.sin(frame * 0.2) * (dance === 'worm' ? 20 : 8);
+    svg.style.transform = `translateY(${bounce}px) rotate(${rotate}deg)`;
+    if (frame > 60) clearInterval(anim);
+  }, 50);
+}
+
+// Award XP when session is saved
+const _origSaveSession = typeof saveSession !== 'undefined' ? saveSession : null;
+
+function getXPBar(uid) {
+  const d = load();
+  const xp = getUserXP(d, uid);
+  const level = getUserLevel(xp);
+  const next = getNextLevel(xp);
+  const progress = next ? Math.round(((xp - level.xpRequired) / (next.xpRequired - level.xpRequired)) * 100) : 100;
+  
+  return `<div style="margin-top:8px;">
+    <div style="display:flex;justify-content:space-between;font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:1px;color:var(--text-dim);margin-bottom:4px;">
+      <span>${level.name} · ${xp} XP</span>
+      <span>${next ? next.xpRequired - xp + ' to ' + next.name : 'MAX LEVEL 🏆'}</span>
+    </div>
+    <div style="background:var(--surface3);border-radius:100px;height:4px;overflow:hidden;">
+      <div style="background:var(--accent);height:100%;width:${progress}%;border-radius:100px;transition:width 0.5s;"></div>
+    </div>
+  </div>`;
+}
+
+
+// ═══════════════════════════════════════════════
+// DETAILED BODY HEATMAP
+// ═══════════════════════════════════════════════
+function buildDetailedHeatmap(sessions, userColor) {
+  // Calculate volume per muscle group
+  const muscleVolume = {};
+  
+  sessions.forEach(s => {
+    (s.exercises || []).forEach(ex => {
+      const n = ex.name.toLowerCase();
+      const vol = (ex.sets || []).reduce((t, set) => 
+        t + (parseFloat(set.weight)||0) * (parseInt(set.reps)||0), 0);
+      
+      const addVol = (muscle) => {
+        muscleVolume[muscle] = (muscleVolume[muscle] || 0) + vol;
+      };
+      
+      if(n.includes('squat')||n.includes('hack')||n.includes('leg press')||n.includes('leg ext')||n.includes('lunge'))addVol('Quads');
+      if(n.includes('hip thrust')||n.includes('rdl')||n.includes('glute')||n.includes('kickback')||n.includes('abduction'))addVol('Glutes');
+      if(n.includes('hamstring')||n.includes('rdl')||n.includes('nordic')||n.includes('curl'))addVol('Hamstrings');
+      if(n.includes('bench')||n.includes('chest')||n.includes('fly')||n.includes('push up'))addVol('Chest');
+      if(n.includes('shoulder')||n.includes('overhead')||n.includes('lateral')||n.includes('delt'))addVol('Shoulders');
+      if(n.includes('tricep')||n.includes('pushdown')||n.includes('skull')||n.includes('dip'))addVol('Triceps');
+      if(n.includes('pull')||n.includes('lat')||n.includes('row'))addVol('Lats');
+      if(n.includes('bicep')||n.includes('curl'))addVol('Biceps');
+      if(n.includes('calf'))addVol('Calves');
+      if(n.includes('core')||n.includes('sit up')||n.includes('plank')||n.includes('ab'))addVol('Core');
+      if(n.includes('trap'))addVol('Traps');
+    });
+  });
+
+  const maxVol = Math.max(...Object.values(muscleVolume), 1);
+  
+  const getColor = (muscle) => {
+    const vol = muscleVolume[muscle] || 0;
+    if (!vol) return '#1a1a1a';
+    const intensity = vol / maxVol;
+    const r = parseInt(userColor.slice(1,3), 16);
+    const g = parseInt(userColor.slice(3,5), 16);
+    const b = parseInt(userColor.slice(5,7), 16);
+    return `rgba(${r},${g},${b},${0.15 + intensity * 0.85})`;
+  };
+  
+  const getStroke = (muscle) => {
+    const vol = muscleVolume[muscle] || 0;
+    if (!vol) return '#2a2a2a';
+    return userColor;
+  };
+
+  // Build legend
+  const sortedMuscles = Object.entries(muscleVolume)
+    .sort((a,b) => b[1]-a[1])
+    .slice(0,6);
+  
+  const legendHtml = sortedMuscles.map(([m, vol]) => {
+    const intensity = vol/maxVol;
+    return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+      <div style="width:10px;height:10px;border-radius:2px;background:${userColor};opacity:${0.3+intensity*0.7};flex-shrink:0;"></div>
+      <div style="font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;flex:1;">${m}</div>
+      <div style="font-size:11px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;">${Math.round(vol/1000)}t</div>
+    </div>`;
+  }).join('');
+
+  return `<div style="display:flex;gap:16px;align-items:flex-start;">
+    <!-- Front body -->
+    <svg viewBox="0 0 120 260" width="100" height="220">
+      <!-- Head -->
+      <circle cx="60" cy="18" r="14" fill="#1e1e1e" stroke="#333" stroke-width="1.5"/>
+      <!-- Neck -->
+      <rect x="54" y="30" width="12" height="10" rx="3" fill="#1e1e1e" stroke="#333" stroke-width="1"/>
+      <!-- Shoulders -->
+      <ellipse cx="35" cy="48" rx="14" ry="10" fill="${getColor('Shoulders')}" stroke="${getStroke('Shoulders')}" stroke-width="1.5"/>
+      <ellipse cx="85" cy="48" rx="14" ry="10" fill="${getColor('Shoulders')}" stroke="${getStroke('Shoulders')}" stroke-width="1.5"/>
+      <!-- Chest -->
+      <path d="M40 42 Q60 38 80 42 L82 68 Q60 72 38 68 Z" fill="${getColor('Chest')}" stroke="${getStroke('Chest')}" stroke-width="1.5"/>
+      <!-- Chest line -->
+      <line x1="60" y1="42" x2="60" y2="68" stroke="#0008" stroke-width="0.5"/>
+      <!-- Core/Abs -->
+      <rect x="44" y="68" width="32" height="36" rx="4" fill="${getColor('Core')}" stroke="${getStroke('Core')}" stroke-width="1.5"/>
+      <!-- Ab lines -->
+      <line x1="60" y1="68" x2="60" y2="104" stroke="#0006" stroke-width="0.5"/>
+      <line x1="44" y1="80" x2="76" y2="80" stroke="#0006" stroke-width="0.5"/>
+      <line x1="44" y1="92" x2="76" y2="92" stroke="#0006" stroke-width="0.5"/>
+      <!-- Upper arms -->
+      <ellipse cx="26" cy="70" rx="9" ry="20" fill="${getColor('Biceps')}" stroke="${getStroke('Biceps')}" stroke-width="1.5"/>
+      <ellipse cx="94" cy="70" rx="9" ry="20" fill="${getColor('Biceps')}" stroke="${getStroke('Biceps')}" stroke-width="1.5"/>
+      <!-- Lower arms -->
+      <ellipse cx="22" cy="105" rx="7" ry="18" fill="#1e1e1e" stroke="#333" stroke-width="1"/>
+      <ellipse cx="98" cy="105" rx="7" ry="18" fill="#1e1e1e" stroke="#333" stroke-width="1"/>
+      <!-- Hips -->
+      <path d="M38 104 Q60 100 82 104 L86 124 Q60 128 34 124 Z" fill="${getColor('Glutes')}" stroke="${getStroke('Glutes')}" stroke-width="1.5"/>
+      <!-- Quads -->
+      <ellipse cx="46" cy="158" rx="14" ry="34" fill="${getColor('Quads')}" stroke="${getStroke('Quads')}" stroke-width="1.5"/>
+      <ellipse cx="74" cy="158" rx="14" ry="34" fill="${getColor('Quads')}" stroke="${getStroke('Quads')}" stroke-width="1.5"/>
+      <!-- Knee -->
+      <ellipse cx="46" cy="196" rx="11" ry="8" fill="#1e1e1e" stroke="#333" stroke-width="1"/>
+      <ellipse cx="74" cy="196" rx="11" ry="8" fill="#1e1e1e" stroke="#333" stroke-width="1"/>
+      <!-- Calves -->
+      <ellipse cx="46" cy="224" rx="10" ry="20" fill="${getColor('Calves')}" stroke="${getStroke('Calves')}" stroke-width="1.5"/>
+      <ellipse cx="74" cy="224" rx="10" ry="20" fill="${getColor('Calves')}" stroke="${getStroke('Calves')}" stroke-width="1.5"/>
+      <!-- FRONT label -->
+      <text x="60" y="255" text-anchor="middle" font-size="8" fill="#555" font-family="Barlow Condensed" letter-spacing="2">FRONT</text>
+    </svg>
+    
+    <!-- Back body -->
+    <svg viewBox="0 0 120 260" width="100" height="220">
+      <!-- Head -->
+      <circle cx="60" cy="18" r="14" fill="#1e1e1e" stroke="#333" stroke-width="1.5"/>
+      <!-- Neck -->
+      <rect x="54" y="30" width="12" height="10" rx="3" fill="#1e1e1e" stroke="#333" stroke-width="1"/>
+      <!-- Traps -->
+      <path d="M40 36 Q60 32 80 36 L85 50 Q60 46 35 50 Z" fill="${getColor('Traps')}" stroke="${getStroke('Traps')}" stroke-width="1.5"/>
+      <!-- Rear delts -->
+      <ellipse cx="32" cy="52" rx="14" ry="10" fill="${getColor('Shoulders')}" stroke="${getStroke('Shoulders')}" stroke-width="1.5"/>
+      <ellipse cx="88" cy="52" rx="14" ry="10" fill="${getColor('Shoulders')}" stroke="${getStroke('Shoulders')}" stroke-width="1.5"/>
+      <!-- Lats -->
+      <path d="M35 50 Q28 75 35 100 L44 105 Q44 75 44 50 Z" fill="${getColor('Lats')}" stroke="${getStroke('Lats')}" stroke-width="1.5"/>
+      <path d="M85 50 Q92 75 85 100 L76 105 Q76 75 76 50 Z" fill="${getColor('Lats')}" stroke="${getStroke('Lats')}" stroke-width="1.5"/>
+      <!-- Mid back -->
+      <rect x="44" y="50" width="32" height="55" rx="4" fill="${getColor('Lats')}" stroke="${getStroke('Lats')}" stroke-width="1" opacity="0.7"/>
+      <!-- Triceps -->
+      <ellipse cx="24" cy="72" rx="9" ry="20" fill="${getColor('Triceps')}" stroke="${getStroke('Triceps')}" stroke-width="1.5"/>
+      <ellipse cx="96" cy="72" rx="9" ry="20" fill="${getColor('Triceps')}" stroke="${getStroke('Triceps')}" stroke-width="1.5"/>
+      <!-- Lower arms -->
+      <ellipse cx="20" cy="108" rx="7" ry="18" fill="#1e1e1e" stroke="#333" stroke-width="1"/>
+      <ellipse cx="100" cy="108" rx="7" ry="18" fill="#1e1e1e" stroke="#333" stroke-width="1"/>
+      <!-- Glutes -->
+      <path d="M36 105 Q60 100 84 105 L86 132 Q60 138 34 132 Z" fill="${getColor('Glutes')}" stroke="${getStroke('Glutes')}" stroke-width="2"/>
+      <!-- Glute line -->
+      <line x1="60" y1="105" x2="60" y2="132" stroke="#0008" stroke-width="0.8"/>
+      <!-- Hamstrings -->
+      <ellipse cx="46" cy="162" rx="14" ry="32" fill="${getColor('Hamstrings')}" stroke="${getStroke('Hamstrings')}" stroke-width="1.5"/>
+      <ellipse cx="74" cy="162" rx="14" ry="32" fill="${getColor('Hamstrings')}" stroke="${getStroke('Hamstrings')}" stroke-width="1.5"/>
+      <!-- Knee -->
+      <ellipse cx="46" cy="198" rx="11" ry="8" fill="#1e1e1e" stroke="#333" stroke-width="1"/>
+      <ellipse cx="74" cy="198" rx="11" ry="8" fill="#1e1e1e" stroke="#333" stroke-width="1"/>
+      <!-- Calves back -->
+      <ellipse cx="46" cy="226" rx="10" ry="20" fill="${getColor('Calves')}" stroke="${getStroke('Calves')}" stroke-width="1.5"/>
+      <ellipse cx="74" cy="226" rx="10" ry="20" fill="${getColor('Calves')}" stroke="${getStroke('Calves')}" stroke-width="1.5"/>
+      <!-- BACK label -->
+      <text x="60" y="255" text-anchor="middle" font-size="8" fill="#555" font-family="Barlow Condensed" letter-spacing="2">BACK</text>
+    </svg>
+    
+    <!-- Legend -->
+    <div style="flex:1;min-width:0;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Most Trained</div>
+      ${legendHtml}
+      ${Object.keys(muscleVolume).length === 0 ? '<div style="font-size:12px;color:var(--text-dim);">No data yet</div>' : ''}
+    </div>
+  </div>`;
+}
+
+
+// ═══════════════════════════════════════════════
+// MONTHLY REPORTS
+// ═══════════════════════════════════════════════
+function generateMonthlyReport(userId, year, month) {
+  const d = load();
+  const user = d.users.find(u => u.id === userId);
+  const sessions = getUserSessions(d, userId).filter(s => {
+    const [y, m] = s.date.split('-');
+    return parseInt(y) === year && parseInt(m) === month;
+  });
+  
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear = month === 1 ? year - 1 : year;
+  const prevSessions = getUserSessions(d, userId).filter(s => {
+    const [y, m] = s.date.split('-');
+    return parseInt(y) === prevYear && parseInt(m) === prevMonth;
+  });
+  
+  const totalVol = Math.round(sessions.reduce((t, s) => 
+    t + (s.exercises||[]).reduce((st, ex) => 
+      st + (ex.sets||[]).reduce((sv, set) => 
+        sv + (parseFloat(set.weight)||0) * (parseInt(set.reps)||0), 0), 0), 0));
+  
+  const prevVol = Math.round(prevSessions.reduce((t, s) => 
+    t + (s.exercises||[]).reduce((st, ex) => 
+      st + (ex.sets||[]).reduce((sv, set) => 
+        sv + (parseFloat(set.weight)||0) * (parseInt(set.reps)||0), 0), 0), 0));
+  
+  const volChange = prevVol > 0 ? Math.round(((totalVol - prevVol) / prevVol) * 100) : 0;
+  
+  // PBs this month
+  const pbs = [];
+  sessions.forEach(s => (s.newPBs||[]).forEach(pb => pbs.push(pb)));
+  
+  // Best session
+  let bestSession = null, bestVol = 0;
+  sessions.forEach(s => {
+    const vol = Math.round((s.exercises||[]).reduce((t, ex) => 
+      t + (ex.sets||[]).reduce((sv, set) => 
+        sv + (parseFloat(set.weight)||0) * (parseInt(set.reps)||0), 0), 0));
+    if (vol > bestVol) { bestVol = vol; bestSession = s; }
+  });
+  
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthName = monthNames[month-1];
+  
+  // Most trained muscle
+  const muscleCount = {};
+  sessions.forEach(s => {
+    (s.exercises||[]).forEach(ex => {
+      const n = ex.name.toLowerCase();
+      if(n.includes('squat')||n.includes('lunge')||n.includes('leg'))muscleCount['Quads']=(muscleCount['Quads']||0)+1;
+      if(n.includes('hip thrust')||n.includes('rdl')||n.includes('glute'))muscleCount['Glutes']=(muscleCount['Glutes']||0)+1;
+      if(n.includes('bench')||n.includes('chest')||n.includes('press'))muscleCount['Chest']=(muscleCount['Chest']||0)+1;
+      if(n.includes('pull')||n.includes('row')||n.includes('lat'))muscleCount['Back']=(muscleCount['Back']||0)+1;
+    });
+  });
+  const topMuscle = Object.entries(muscleCount).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'N/A';
+  
+  return {
+    month: monthName, year, userId,
+    userName: user?.name || userId,
+    sessions: sessions.length,
+    prevSessions: prevSessions.length,
+    totalVol, prevVol, volChange,
+    pbs, bestSession, bestVol,
+    topMuscle,
+    avgSessionVol: sessions.length ? Math.round(totalVol / sessions.length) : 0,
+  };
+}
+
+function openMonthlyReport() {
+  const now = new Date();
+  const report = generateMonthlyReport(activeUser, now.getFullYear(), now.getMonth() + 1);
+  
+  const volArrow = report.volChange > 0 ? '↑' : report.volChange < 0 ? '↓' : '→';
+  const volColor = report.volChange > 0 ? '#4ade80' : report.volChange < 0 ? '#ff4444' : 'var(--text-dim)';
+  
+  const bestDay = report.bestSession ? (() => {
+    const d = load();
+    const user = d.users.find(u => u.id === activeUser);
+    const day = (user?.days||[]).find(dy => dy.id === report.bestSession.dayId);
+    return (day?.icon||'') + ' ' + (day?.name || report.bestSession.dayId);
+  })() : 'N/A';
+  
+  let html = `
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;margin-bottom:4px;">${report.month} ${report.year}</div>
+    <div style="font-size:12px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;margin-bottom:20px;">${report.userName}'s Monthly Report</div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--accent);">${report.sessions}</div>
+        <div style="font-size:10px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">SESSIONS</div>
+        <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${report.prevSessions > 0 ? (report.sessions > report.prevSessions ? '+' : '') + (report.sessions - report.prevSessions) + ' vs last month' : ''}</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:${volColor};">${volArrow}${Math.abs(report.volChange)}%</div>
+        <div style="font-size:10px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">VOLUME VS LAST MONTH</div>
+        <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${report.totalVol.toLocaleString()}kg total</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--text);">${report.pbs.length}</div>
+        <div style="font-size:10px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">NEW PBs 🏆</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--text);">${report.avgSessionVol.toLocaleString()}</div>
+        <div style="font-size:10px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">AVG SESSION kg</div>
+      </div>
+    </div>
+    
+    ${report.pbs.length ? `
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">PBs This Month</div>
+    <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;">
+      ${report.pbs.map(pb => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:1px;"><span>${pb.exercise}</span><span style="color:var(--accent);">${pb.weight}kg 🏆</span></div>`).join('')}
+    </div>` : ''}
+    
+    ${report.bestSession ? `
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Best Session</div>
+    <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;">
+      <div style="font-weight:700;font-size:14px;">${bestDay}</div>
+      <div style="font-size:12px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">${fmtDate(report.bestSession.date)} · ${report.bestVol.toLocaleString()}kg</div>
+    </div>` : ''}
+    
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Most Trained</div>
+    <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;font-family:'Barlow Condensed',sans-serif;font-size:15px;letter-spacing:1px;">
+      ${report.topMuscle}
+    </div>
+  `;
+  
+  document.getElementById('monthly-report-content').innerHTML = html;
+  document.getElementById('monthly-report-modal').classList.remove('hidden');
+}
+
+function exportMonthlyReport() {
+  const now = new Date();
+  const report = generateMonthlyReport(activeUser, now.getFullYear(), now.getMonth() + 1);
+  const d = load();
+  const user = d.users.find(u => u.id === activeUser);
+  
+  let text = `YOKED — ${report.userName} Monthly Report\n`;
+  text += `${report.month} ${report.year}\n`;
+  text += '='.repeat(40) + '\n\n';
+  text += `Sessions: ${report.sessions}\n`;
+  text += `Total Volume: ${report.totalVol.toLocaleString()}kg\n`;
+  text += `Avg Session: ${report.avgSessionVol.toLocaleString()}kg\n`;
+  text += `Volume vs Last Month: ${report.volChange > 0 ? '+' : ''}${report.volChange}%\n`;
+  text += `New PBs: ${report.pbs.length}\n`;
+  text += `Most Trained: ${report.topMuscle}\n\n`;
+  
+  if (report.pbs.length) {
+    text += 'PBs This Month:\n';
+    report.pbs.forEach(pb => text += `  ${pb.exercise}: ${pb.weight}kg\n`);
+    text += '\n';
+  }
+  
+  const blob = new Blob([text], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `YOKED_${report.userName}_${report.month}_${report.year}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📥 Report exported!');
+}
+
+// ═══════════════════════════════════════════════
+// TIMED EXERCISES
+// ═══════════════════════════════════════════════
+const TIMED_EXERCISES = ['Dead Hang', 'Dead Hangs', 'Plank', 'Hollow Body Hold', 'Hollow Hold', 
+  'Wall Sit', 'L-Sit', 'L-Sit Hold', 'Farmers Walk', "Farmer's Walk", 'Hanging', 'Static Hold'];
+
+function isTimedExercise(name){
+  return TIMED_EXERCISES.some(e=>e.toLowerCase()===name.toLowerCase()) || 
+    name.toLowerCase().includes('hold') || 
+    name.toLowerCase().includes('hang') ||
+    name.toLowerCase().includes('plank');
+}
+
 // ═══════════════════════════════════════════════
 // BACK BUTTON (History API)
 // ═══════════════════════════════════════════════
@@ -3055,24 +3599,53 @@ function saveAsTemplate() {
   showToast('📋 Template saved!');
 }
 
+function openTemplatesManager() {
+  openTemplateModal();
+}
+
 function openTemplateModal() {
   const d = load();
   const templates = (d.templates || []).filter(t => t.userId === activeUser);
   const list = document.getElementById('template-list');
   if (!templates.length) {
-    list.innerHTML = '<div class="empty"><span class="empty-icon">📋</span><div class="empty-text">No templates yet</div></div>';
+    list.innerHTML = '<div class="empty"><span class="empty-icon">📋</span><div class="empty-text">No templates yet — save a session as a template to get started</div></div>';
   } else {
     list.innerHTML = templates.map(t => `
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;">
-        <div style="flex:1;">
-          <div style="font-weight:600;font-size:14px;">${t.name}</div>
-          <div style="font-size:11px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">${Object.keys(t.exercises||{}).length} exercises · ${t.createdAt}</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:15px;">${t.name}</div>
+            <div style="font-size:11px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">${Object.keys(t.exercises||{}).length} exercises · ${t.createdAt}</div>
+          </div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="loadTemplate('${t.id}')">Load</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteTemplate('${t.id}')">🗑️</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+          <button class="btn btn-primary btn-sm" onclick="loadTemplate('${t.id}')">⚡ Load</button>
+          <button class="btn btn-secondary btn-sm" onclick="viewTemplate('${t.id}')">👁️ View</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTemplate('${t.id}')">🗑️ Delete</button>
+        </div>
       </div>`).join('');
   }
   document.getElementById('template-modal').classList.remove('hidden');
+}
+
+function viewTemplate(id) {
+  const d = load();
+  const t = (d.templates || []).find(t => t.id === id);
+  if (!t) return;
+  let html = `<div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;margin-bottom:4px;">${t.name}</div>`;
+  html += `<div style="font-size:11px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;margin-bottom:16px;">${t.createdAt}</div>`;
+  Object.entries(t.exercises || {}).forEach(([name, sets]) => {
+    html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:6px;">
+      <div style="font-weight:700;font-size:14px;margin-bottom:4px;">${name}</div>
+      <div style="font-size:12px;color:var(--text-dim);font-family:'Barlow Condensed',sans-serif;">
+        ${sets.map((s,i) => `S${i+1}: ${s.reps||'?'} reps @ ${s.weight||'?'}kg`).join(' · ')}
+      </div>
+    </div>`;
+  });
+  html += `<div style="height:12px;"></div>`;
+  html += `<button class="btn btn-primary btn-full" onclick="loadTemplate('${id}');document.getElementById('template-detail-modal').classList.add('hidden')">⚡ Load This Template</button>`;
+  document.getElementById('template-detail-content').innerHTML = html;
+  document.getElementById('template-detail-modal').classList.remove('hidden');
 }
 
 function loadTemplate(id) {
@@ -3635,10 +4208,15 @@ function useSessionAsTemplate(sessionId){
     cathalSessionData.forEach(s=>{
       if(!d.sessions.find(x=>x.id===s.id)){d.sessions.push(s);changed=true;}
     });
+    // Seed Lauren's May 8 glutes session
+    const may8Session = {"id": "lauren_glutes_may08", "userId": "lauren", "dayId": "glutes", "date": "2026-05-08", "notes": "", "bodyweight": null, "exercises": [{"name": "Hip Thrusts", "sets": [{"reps": 8, "weight": 50}, {"reps": 8, "weight": 60}, {"reps": 8, "weight": 70}]}, {"name": "RDLs", "sets": [{"reps": 8, "weight": 50}, {"reps": 8, "weight": 50}, {"reps": 8, "weight": 60}]}, {"name": "Glute Kickbacks", "sets": [{"reps": 8, "weight": 25}, {"reps": 8, "weight": 30}, {"reps": 8, "weight": 35}]}, {"name": "Nordic Curls", "sets": [{"reps": 8, "weight": null}, {"reps": 8, "weight": null}, {"reps": 8, "weight": null}]}, {"name": "Sit Ups", "sets": [{"reps": 10, "weight": null}, {"reps": 10, "weight": null}, {"reps": 10, "weight": null}]}, {"name": "Leg Press", "sets": [{"reps": 8, "weight": 70}, {"reps": 8, "weight": 80}, {"reps": 8, "weight": 80}]}, {"name": "Back Extensions", "sets": [{"reps": 10, "weight": null}, {"reps": 10, "weight": null}, {"reps": 10, "weight": null}]}, {"name": "Hip Abduction", "sets": [{"reps": 8, "weight": 15}, {"reps": 8, "weight": 15}, {"reps": 8, "weight": 15}]}, {"name": "Bulgarian Split Squats", "sets": [{"reps": 10, "weight": 25}, {"reps": 10, "weight": 25}]}], "skills": [], "newPBs": [{"exercise": "Hip Thrusts", "weight": 70}, {"exercise": "RDLs", "weight": 60}, {"exercise": "Glute Kickbacks", "weight": 35}, {"exercise": "Leg Press", "weight": 80}]};
+    if(!d.sessions.find(s=>s.id===may8Session.id)){d.sessions.push(may8Session);changed=true;}
+
     if(changed){save(d);console.log('Migration done!');}
   })();
 })();
 </script>
+
 
 <!-- WIKI MODAL -->
 <div class="modal-overlay hidden" id="wiki-modal" style="align-items:stretch;">
@@ -3721,12 +4299,22 @@ function useSessionAsTemplate(sessionId){
 
 <!-- TEMPLATE MODAL -->
 <div class="modal-overlay hidden" id="template-modal" onclick="if(event.target===this)this.classList.add('hidden')">
-  <div class="modal">
+  <div class="modal" style="max-height:90vh;">
     <div class="modal-handle"></div>
-    <div class="modal-title">⚡ Templates</div>
-    <div id="template-list"></div>
+    <div class="modal-title">📋 Templates</div>
+    <div id="template-list" style="max-height:60vh;overflow-y:auto;"></div>
     <div style="height:8px;"></div>
-    <button class="btn btn-secondary btn-full" onclick="document.getElementById('template-modal').classList.add('hidden')">Cancel</button>
+    <button class="btn btn-secondary btn-full" onclick="document.getElementById('template-modal').classList.add('hidden')">Close</button>
+  </div>
+</div>
+
+<!-- TEMPLATE DETAIL MODAL -->
+<div class="modal-overlay hidden" id="template-detail-modal" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal" style="max-height:90vh;">
+    <div class="modal-handle"></div>
+    <div id="template-detail-content" style="max-height:60vh;overflow-y:auto;"></div>
+    <div style="height:8px;"></div>
+    <button class="btn btn-secondary btn-full" onclick="document.getElementById('template-detail-modal').classList.add('hidden')">← Back</button>
   </div>
 </div>
 
@@ -3792,6 +4380,28 @@ function useSessionAsTemplate(sessionId){
     <div style="display:flex;flex-direction:column;gap:8px;" id="leg-picker-btns"></div>
     <div style="height:8px;"></div>
     <button class="btn btn-secondary btn-full" onclick="document.getElementById('leg-picker-modal').classList.add('hidden')">Cancel</button>
+  </div>
+</div>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW failed:', err));
+  });
+}
+
+
+<!-- MONTHLY REPORT MODAL -->
+<div class="modal-overlay hidden" id="monthly-report-modal" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal" style="max-height:90vh;">
+    <div class="modal-handle"></div>
+    <div id="monthly-report-content" style="max-height:65vh;overflow-y:auto;"></div>
+    <div style="height:8px;"></div>
+    <button class="btn btn-secondary btn-full" onclick="exportMonthlyReport()">📥 Export Report</button>
+    <div style="height:8px;"></div>
+    <button class="btn btn-secondary btn-full" onclick="document.getElementById('monthly-report-modal').classList.add('hidden')">Close</button>
   </div>
 </div>
 
