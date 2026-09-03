@@ -1016,6 +1016,7 @@ function pickEmoji(e){toggleReact(currentEmojiPbId,e);document.getElementById('e
 // ═══════════════════════════════════════════════
 let activeUser=null; // single source of truth for selected user across all tabs
 let logDay=null,logExercises={},cardCollapsed={};
+let heatmapFilter='month';
 
 function renderLog(){
   const d=load();
@@ -4291,9 +4292,9 @@ function importAllData(){
     document.getElementById('page-log').classList.add('active');
     document.querySelectorAll('.tab-btn')[1].classList.add('active');
     showToast('📋 Session restored!');
-    requestAnimationFrame(()=>{renderHome();renderLog();});
+    setTimeout(()=>{renderHome();renderLog();},0);
   } else {
-    requestAnimationFrame(()=>renderHome());
+    setTimeout(()=>renderHome(),0);
   }
 
   // ── MIGRATION: update existing data without wiping it ──────────────────
