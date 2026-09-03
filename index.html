@@ -447,12 +447,6 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;disp
     <button class="btn btn-primary btn-full" id="timer-start-btn" onclick="startRestTimer()">▶ Start</button>
     <div style="height:8px;"></div>
     <div style="height:8px;"></div>
-    <!-- Rest break activities -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">
-      <button class="btn btn-secondary btn-full" onclick="showRestActivity('snake')" style="font-size:18px;">🐍 Snake</button>
-      <button class="btn btn-secondary btn-full" onclick="showRestActivity('facts')" style="font-size:18px;">💡 Facts</button>
-    </div>
-    <div style="height:8px;"></div>
     <button class="btn btn-secondary btn-full" onclick="closeTimerModal()">Close</button>
   </div>
 </div>
@@ -875,11 +869,14 @@ function showTab(tab,btn,pushHistory=true){
   document.getElementById('main-scroll').scrollTop=0;
   dismissKeyboard();
   if(pushHistory)history.pushState({tab},'','/');
-  if(tab==='home')renderHome();
-  if(tab==='log')renderLog();
-  if(tab==='progress')renderProgress();
-  if(tab==='history')renderHistory();
-  if(tab==='beasts')renderBeasts();
+  // Use requestAnimationFrame to ensure DOM is updated before rendering
+  requestAnimationFrame(()=>{
+    if(tab==='home')renderHome();
+    if(tab==='log')renderLog();
+    if(tab==='progress')renderProgress();
+    if(tab==='history')renderHistory();
+    if(tab==='beasts')renderBeasts();
+  });
 }
 
 // Handle browser back button
@@ -1027,7 +1024,11 @@ function renderLog(){
     document.getElementById('log-content').innerHTML=`<div class="empty"><span class="empty-icon">💪</span><div class="empty-text">Add beasts first</div></div>`;
     pills.innerHTML='';return;
   }
-  if(!activeUser&&d.users.length)activeUser=d.users[0].id;
+  if(!activeUser){
+    const saved=localStorage.getItem('yoked_active_user');
+    if(saved&&d.users.find(u=>u.id===saved))activeUser=saved;
+    else if(d.users.length)activeUser=d.users[0].id;
+  }
   pills.innerHTML=d.users.map(u=>`<button class="user-pill ${activeUser===u.id?'selected':''}"
     style="${activeUser===u.id?`background:${u.color};border-color:${u.color};`:`border-color:${u.color};color:${u.color};`}"
     onclick="setLogUser('${u.id}')">${u.name}</button>`).join('');
@@ -1931,14 +1932,16 @@ function renderProgress(){
     document.getElementById('progress-content').innerHTML=`<div class="empty"><span class="empty-icon">📈</span><div class="empty-text">No beasts yet!</div></div>`;
     document.getElementById('progress-user-pills').innerHTML='';return;
   }
-  if(!activeUser&&d.users.length)activeUser=d.users[0].id;
+  if(!activeUser){
+    const saved=localStorage.getItem('yoked_active_user');
+    if(saved&&d.users.find(u=>u.id===saved))activeUser=saved;
+    else if(d.users.length)activeUser=d.users[0].id;
+  }
   document.getElementById('progress-user-pills').innerHTML=d.users.map(u=>`<button class="user-pill ${activeUser===u.id?'selected':''}"
     style="${activeUser===u.id?`background:${u.color};border-color:${u.color};`:`border-color:${u.color};color:${u.color};`}"
     onclick="setProgUser('${u.id}')">${u.name}</button>`).join('');
-  // Only re-render charts if progress tab is actually visible
-  if(document.getElementById('page-progress').classList.contains('active')){
-    renderProgContent();
-  }
+  // Always render content when renderProgress is called
+  renderProgContent();
 }
 
 function setProgUser(uid){activeUser=uid;renderProgress();}
@@ -2110,7 +2113,11 @@ function renderHistory(){
     document.getElementById('history-content').innerHTML=`<div class="empty"><span class="empty-icon">📋</span><div class="empty-text">No beasts yet!</div></div>`;
     document.getElementById('history-user-pills').innerHTML='';return;
   }
-  if(!activeUser&&d.users.length)activeUser=d.users[0].id;
+  if(!activeUser){
+    const saved=localStorage.getItem('yoked_active_user');
+    if(saved&&d.users.find(u=>u.id===saved))activeUser=saved;
+    else if(d.users.length)activeUser=d.users[0].id;
+  }
   document.getElementById('history-user-pills').innerHTML=d.users.map(u=>`<button class="user-pill ${activeUser===u.id?'selected':''}"
     style="${activeUser===u.id?`background:${u.color};border-color:${u.color};`:`border-color:${u.color};color:${u.color};`}"
     onclick="setHistUser('${u.id}')">${u.name}</button>`).join('');
@@ -2517,7 +2524,34 @@ const WIKI_EXERCISES = [{"id": "bench_press", "name": "Bench Press", "category":
   {"id": "stir_the_pot", "name": "Stir the Pot", "category": "Core", "equipment": "Swiss Ball", "primary": ["Core", "Transverse Abdominis"], "secondary": ["Shoulders", "Obliques"], "steps": ["Forearms on Swiss ball, plank position", "Make small circles with your forearms on the ball", "Alternate direction each set"], "cues": ["Body stays completely still \u2014 only arms move", "Small circles \u2014 big circles are cheating", "Brace everything"], "tips": ["Brutal core stability exercise", "The instability of the ball makes plank much harder", "Start with very small circles"], "youtube": "https://www.youtube.com/watch?v=1gVwP5_5c0Y"},
   {"id": "paused_squat", "name": "Paused Squat", "category": "Legs", "equipment": "Barbell", "primary": ["Quads", "Glutes"], "secondary": ["Hamstrings", "Core"], "steps": ["Squat down to parallel", "PAUSE for 2-3 seconds at the bottom \u2014 no bouncing", "Drive up without any momentum"], "cues": ["The pause removes the stretch reflex \u2014 must use pure strength", "Stay braced throughout the pause", "Don't relax at the bottom"], "tips": ["Builds raw strength out of the hole", "Eliminates bouncing out of the bottom", "Great for fixing sticking points in the squat"], "youtube": "https://www.youtube.com/watch?v=wUHNLbFNwqo"},
   {"id": "box_squat", "name": "Box Squat", "category": "Legs", "equipment": "Barbell", "primary": ["Quads", "Glutes"], "secondary": ["Hamstrings", "Core"], "steps": ["Set box to parallel height behind you", "Squat back onto box \u2014 sit back not down", "Pause briefly on box", "Drive up through floor"], "cues": ["Sit BACK \u2014 hips go back first", "Brief pause on box \u2014 don't relax completely", "Drive knees out"], "tips": ["Teaches proper hip hinge in squat", "Great for quad and posterior chain power", "Used heavily in powerlifting training"], "youtube": "https://www.youtube.com/watch?v=dcq0bAN0I4M"},
-  {"id": "l_sit", "name": "L-Sit Hold", "category": "Core", "equipment": "Parallel Bars/Floor", "primary": ["Core", "Hip Flexors"], "secondary": ["Triceps", "Shoulders", "Quads"], "steps": ["Support on parallel bars or floor", "Extend legs straight out in front \u2014 parallel to floor", "Hold position as long as possible"], "cues": ["Legs must be straight and parallel to floor", "Depress shoulders \u2014 don't shrug", "Point toes"], "tips": ["Gymnastics fundamental \u2014 incredibly hard", "Start with tuck L-sit (knees bent) and progress", "Builds serious core and hip flexor strength"], "youtube": "https://www.youtube.com/watch?v=IUZJoSP66HI"}];
+  {"id": "l_sit", "name": "L-Sit Hold", "category": "Core", "equipment": "Parallel Bars/Floor", "primary": ["Core", "Hip Flexors"], "secondary": ["Triceps", "Shoulders", "Quads"], "steps": ["Support on parallel bars or floor", "Extend legs straight out in front \u2014 parallel to floor", "Hold position as long as possible"], "cues": ["Legs must be straight and parallel to floor", "Depress shoulders \u2014 don't shrug", "Point toes"], "tips": ["Gymnastics fundamental \u2014 incredibly hard", "Start with tuck L-sit (knees bent) and progress", "Builds serious core and hip flexor strength"], "youtube": "https://www.youtube.com/watch?v=IUZJoSP66HI"},
+  {"id": "stationary_barbell_lunge", "name": "Stationary Barbell Lunge", "category": "Legs", "equipment": "Barbell", "primary": ["Quads", "Glutes"], "secondary": ["Hamstrings", "Core", "Hip Flexors"], "steps": ["Place barbell on upper back like a squat", "Step forward into lunge position \u2014 stay there", "Lower back knee toward floor", "Drive through front foot to return to standing", "Complete all reps on one side or alternate"], "cues": ["Front shin stays vertical \u2014 don't let knee cave forward", "Keep torso upright throughout", "Back knee hovers \u2014 don't crash it into the floor", "Drive through the heel of the front foot"], "tips": ["More stable than walking lunges \u2014 better for heavier loading", "Great for fixing leg imbalances", "Barbell adds more load than dumbbells for the same effort", "Keep core braced throughout"], "youtube": "https://www.youtube.com/watch?v=D7KaRcUTQeE"},
+  {"id": "cable_glute_pullthrough", "name": "Cable Glute Pull Through", "category": "Glutes", "equipment": "Cable", "primary": ["Glutes", "Hamstrings"], "secondary": ["Spinal Erectors", "Core"], "steps": ["Set cable at floor height with rope attachment", "Stand facing away, reach through legs to grab rope", "Hinge at hip keeping back flat", "Drive hips forward squeezing glutes hard at top"], "cues": ["This is a hip HINGE not a squat", "Squeeze glutes hard at the top", "Keep arms straight throughout"], "tips": ["Great standing alternative to hip thrust", "Cable provides constant tension", "Start light \u2014 20-30kg"], "youtube": "https://www.youtube.com/watch?v=tJqwMIV6UuE"},
+  {"id": "cable_lat_raise", "name": "Cable Lateral Raise", "category": "Push", "equipment": "Cable", "primary": ["Lateral Deltoid"], "secondary": ["Traps"], "steps": ["Stand side on to cable, handle at lowest", "Hold with far hand, raise arm to shoulder height", "Control return"], "cues": ["Lead with elbow not hand", "Stop at shoulder height", "Slight forward lean shifts to lateral delt"], "tips": ["Cable gives constant tension vs dumbbells", "Cross body cable gives great stretch", "Great for shoulder width"], "youtube": "https://www.youtube.com/watch?v=PPjYBa1bYgs"},
+  {"id": "sumo_deadlift", "name": "Sumo Deadlift", "category": "Glutes", "equipment": "Barbell", "primary": ["Glutes", "Adductors", "Hamstrings"], "secondary": ["Quads", "Spinal Erectors"], "steps": ["Wide stance, toes out 45 degrees", "Grip bar inside legs", "Push knees out over toes as you lift", "Drive hips through at top"], "cues": ["Push the FLOOR away", "Knees track over toes", "Chest up, back flat"], "tips": ["More glute and adductor than conventional", "Shorter range of motion", "Great for longer torsos"], "youtube": "https://www.youtube.com/watch?v=Eh8bqh3GSTk"},
+  {"id": "single_leg_hip_thrust", "name": "Single Leg Hip Thrust", "category": "Glutes", "equipment": "Bench", "primary": ["Glutes"], "secondary": ["Hamstrings", "Core"], "steps": ["Set up like regular hip thrust", "Extend one leg straight out", "Drive through planted heel", "Squeeze glute hard at top"], "cues": ["Hips stay level", "Full hip extension at top", "Working glute should feel like it will cramp"], "tips": ["Brilliant for glute imbalances", "Start with bodyweight", "Great for identifying weaker side"], "youtube": "https://www.youtube.com/watch?v=KxEYnPdOiA4"},
+  {"id": "banded_clamshell", "name": "Banded Clamshell", "category": "Glutes", "equipment": "Resistance Band", "primary": ["Glute Medius"], "secondary": ["Hip External Rotators"], "steps": ["Lie on side, band above knees", "Knees bent at 90, feet together", "Rotate top knee up like clamshell opening", "Control return"], "cues": ["Hips stay stacked", "Feel it in side of glute", "Move slowly"], "tips": ["Brilliant glute medius exercise", "Great warm up before hip thrusts", "Use heavier band to progress"], "youtube": "https://www.youtube.com/watch?v=SFmSHBgdxSA"},
+  {"id": "donkey_kick", "name": "Donkey Kick", "category": "Glutes", "equipment": "Bodyweight/Cable", "primary": ["Glutes"], "secondary": ["Hamstrings", "Core"], "steps": ["On all fours, core braced", "Kick one leg back and up, heel toward ceiling", "Squeeze glute hard at top", "Lower with control"], "cues": ["Keep hips square", "Squeeze at top for 1-2 seconds", "Bend knee 90 degrees"], "tips": ["Add ankle weights or cable for resistance", "Great finisher", "High reps work well \u2014 15-20"], "youtube": "https://www.youtube.com/watch?v=SJ1Xuz9D-ZQ"},
+  {"id": "good_morning", "name": "Good Morning", "category": "Glutes", "equipment": "Barbell", "primary": ["Hamstrings", "Spinal Erectors", "Glutes"], "secondary": ["Core"], "steps": ["Bar on upper back", "Slight knee bend", "Hinge forward at hips to near parallel", "Drive hips through to return"], "cues": ["Hip hinge \u2014 same as RDL but bar on back", "Keep neutral spine", "Don't go lower than hamstrings allow"], "tips": ["Builds serious posterior chain strength", "Start very light \u2014 technique is everything", "Used heavily in powerlifting"], "youtube": "https://www.youtube.com/watch?v=YA-h3n9L4YU"},
+  {"id": "glute_bridge", "name": "Glute Bridge", "category": "Glutes", "equipment": "Bodyweight/Barbell", "primary": ["Glutes"], "secondary": ["Hamstrings", "Core"], "steps": ["Lie on back, knees bent, feet flat", "Drive hips up squeezing glutes", "Pause at top", "Lower with control"], "cues": ["Tuck pelvis at top for max squeeze", "Drive through heels", "Don't hyperextend lower back"], "tips": ["Floor version of hip thrust", "Add barbell to progress", "Single leg version excellent for imbalances"], "youtube": "https://www.youtube.com/watch?v=wPM8icPu6H8"},
+  {"id": "45_hyperextension", "name": "45 Degree Hyperextension", "category": "Glutes", "equipment": "Machine", "primary": ["Glutes", "Hamstrings", "Spinal Erectors"], "secondary": ["Core"], "steps": ["Position on 45 degree bench", "Cross arms or hold weight plate", "Lower torso toward floor", "Raise back to parallel"], "cues": ["Squeeze glutes hard at top", "Don't hyperextend past parallel", "Round slightly at bottom to feel hamstrings"], "tips": ["More glute than back extension machine", "Adding plate progresses well", "Great for posterior chain injury prevention"], "youtube": "https://www.youtube.com/watch?v=ph3pddpKzzw"},
+  {"id": "arnold_press", "name": "Arnold Press", "category": "Push", "equipment": "Dumbbell", "primary": ["Shoulders"], "secondary": ["Triceps", "Upper Chest"], "steps": ["Start with dumbbells at chin, palms facing you", "As you press up rotate palms forward", "At top palms face away", "Reverse rotation on way down"], "cues": ["The rotation is what makes this special", "Slow and controlled", "Full range of motion"], "tips": ["Hits all three deltoid heads", "Named after Arnold Schwarzenegger", "Use lighter weight than standard press"], "youtube": "https://www.youtube.com/watch?v=3ml7BH7mNwQ"},
+  {"id": "pec_deck", "name": "Pec Deck", "category": "Push", "equipment": "Machine", "primary": ["Chest"], "secondary": ["Anterior Deltoid"], "steps": ["Sit with back flat against pad", "Forearms on arm pads", "Bring arms together in front", "Control return feeling chest stretch"], "cues": ["Don't let elbows go behind body", "Squeeze chest at peak", "Slow eccentric 3 seconds"], "tips": ["Very safe chest isolation", "Great for shoulder issues", "High reps 12-15 work well"], "youtube": "https://www.youtube.com/watch?v=Z57CtFmRMxA"},
+  {"id": "push_up", "name": "Push Up", "category": "Push", "equipment": "Bodyweight", "primary": ["Chest", "Triceps"], "secondary": ["Shoulders", "Core"], "steps": ["Hands slightly wider than shoulder width", "Body in straight line", "Lower chest to floor", "Press back up"], "cues": ["Don't let hips sag", "Elbows at 45 degrees", "Full range \u2014 chest touches floor"], "tips": ["Underrated exercise \u2014 can add weight vest", "Wide hands more chest, narrow more tricep", "Elevated feet hits upper chest"], "youtube": "https://www.youtube.com/watch?v=IODxDxX7oi4"},
+  {"id": "chest_supported_row", "name": "Chest Supported Row", "category": "Pull", "equipment": "Dumbbell", "primary": ["Rhomboids", "Mid Traps", "Rear Delts"], "secondary": ["Biceps"], "steps": ["Set incline bench to 45 degrees", "Lie face down, chest on pad", "Row dumbbells up squeezing shoulder blades", "Lower with control"], "cues": ["Chest stays on pad", "Lead with elbows", "Squeeze hard at top"], "tips": ["Best row for isolating upper back", "No lower back involvement", "Can go heavier than bent over rows safely"], "youtube": "https://www.youtube.com/watch?v=xQNrFHEMhI4"},
+  {"id": "seated_cable_row", "name": "Seated Cable Row", "category": "Pull", "equipment": "Cable", "primary": ["Lats", "Rhomboids"], "secondary": ["Biceps", "Rear Delts"], "steps": ["Sit at cable row, feet on platform", "Pull handle to lower abdomen", "Squeeze shoulder blades at peak", "Control return"], "cues": ["Drive elbows BACK not up", "Squeeze shoulder blades at end", "No momentum or rocking"], "tips": ["Close grip hits lats, wide grip hits rhomboids", "Constant tension beats barbell row for hypertrophy", "Great for back thickness"], "youtube": "https://www.youtube.com/watch?v=GZbfZ033f74"},
+  {"id": "leg_curl_seated", "name": "Seated Leg Curl", "category": "Legs", "equipment": "Machine", "primary": ["Hamstrings"], "secondary": ["Calves"], "steps": ["Adjust so pad sits above ankles", "Sit with back against pad", "Curl heels under seat", "Control return"], "cues": ["Full range both ways", "Slow eccentric 3 seconds", "Don't let hips lift"], "tips": ["Hits hamstrings in more stretched position than lying version", "Excellent for hamstring hypertrophy", "Great with RDLs and nordics"], "youtube": "https://www.youtube.com/watch?v=ELOCsoDSmrg"},
+  {"id": "step_up", "name": "Step Up", "category": "Legs", "equipment": "Box/Bench", "primary": ["Quads", "Glutes"], "secondary": ["Hamstrings", "Core"], "steps": ["Stand facing box", "Step up with one foot, drive through heel", "Bring other foot up or keep hanging", "Step back down"], "cues": ["Drive through heel of working leg", "Don't push off back foot", "Upright torso"], "tips": ["Hold dumbbells to add load", "Higher box more glute, lower more quad", "Great for fixing imbalances"], "youtube": "https://www.youtube.com/watch?v=dQqApCGd5Ss"},
+  {"id": "preacher_curl", "name": "Preacher Curl", "category": "Arms", "equipment": "Barbell/Dumbbell", "primary": ["Biceps"], "secondary": ["Brachialis"], "steps": ["Sit at preacher bench, upper arms flat on pad", "Lower bar with control", "Curl up squeezing bicep at top", "Don't fully extend at bottom"], "cues": ["Upper arms stay flat on pad", "Full range of motion", "Slow on way down"], "tips": ["Eliminates cheating", "Great for bicep peak", "EZ bar easier on wrists"], "youtube": "https://www.youtube.com/watch?v=fIWP-FRFNU0"},
+  {"id": "concentration_curl", "name": "Concentration Curl", "category": "Arms", "equipment": "Dumbbell", "primary": ["Biceps"], "secondary": ["Brachialis"], "steps": ["Sit on bench, elbow braced against inner thigh", "Curl dumbbell toward shoulder", "Squeeze at top", "Lower fully"], "cues": ["Upper arm stays completely still", "Full range", "Squeeze hard at top"], "tips": ["Best exercise for bicep peak \u2014 research backed", "Can't cheat \u2014 elbow anchored", "Great mind muscle connection"], "youtube": "https://www.youtube.com/watch?v=0AUGkch3tzc"},
+  {"id": "overhead_tricep_ext", "name": "Overhead Tricep Extension", "category": "Arms", "equipment": "Dumbbell/Cable", "primary": ["Triceps Long Head"], "secondary": ["Triceps Lateral Head"], "steps": ["Hold dumbbell overhead with both hands", "Lower behind head bending at elbows", "Press back up to full extension"], "cues": ["Keep elbows close to head", "Full extension at top", "Deep stretch at bottom"], "tips": ["Best for tricep long head \u2014 the biggest part", "Overhead position stretches long head maximally", "Critical for overall arm size"], "youtube": "https://www.youtube.com/watch?v=YbX7Wd8jQ-Q"},
+  {"id": "cable_crunch", "name": "Cable Crunch", "category": "Core", "equipment": "Cable", "primary": ["Rectus Abdominis"], "secondary": ["Obliques"], "steps": ["Kneel at cable, rope attachment above", "Hold rope at sides of head", "Crunch down pulling elbows toward knees", "Control return"], "cues": ["Move RIBCAGE toward hips \u2014 not head to floor", "Keep hips stationary", "Slow eccentric"], "tips": ["One of few core exercises you can progressively overload", "Far superior to sit ups for ab development", "Kneeling removes hip flexor involvement"], "youtube": "https://www.youtube.com/watch?v=2fbujeH3F0E"},
+  {"id": "hanging_leg_raise", "name": "Hanging Leg Raise", "category": "Core", "equipment": "Pull Up Bar", "primary": ["Lower Abs"], "secondary": ["Obliques", "Lats"], "steps": ["Hang from pull up bar", "Raise legs to 90 degrees keeping straight", "Lower with control \u2014 don't swing"], "cues": ["Don't swing", "Keep legs as straight as possible", "Tilt pelvis back at top"], "tips": ["Also builds grip strength", "Bent knee version easier to start", "One of the best lower ab exercises"], "youtube": "https://www.youtube.com/watch?v=Pr1ieGZ5atk"},
+  {"id": "ab_wheel", "name": "Ab Wheel Rollout", "category": "Core", "equipment": "Ab Wheel", "primary": ["Core"], "secondary": ["Lats", "Shoulders"], "steps": ["Kneel holding ab wheel", "Roll forward extending body toward floor", "Pull back using core and lats", "Don't let hips drop"], "cues": ["Keep hips in line", "Brace core HARD before rolling out", "Pull back from lats as much as core"], "tips": ["One of the hardest core exercises", "Start with small range and build", "Trains anti-extension core"], "youtube": "https://www.youtube.com/watch?v=1G1ANKRhMqg"},
+  {"id": "single_arm_cable_row", "name": "Single Arm Cable Row", "category": "Pull", "equipment": "Cable", "primary": ["Lats", "Rhomboids"], "secondary": ["Biceps", "Rear Delts"], "steps": ["Stand or sit at cable, single handle", "Row handle to hip", "Squeeze shoulder blade at peak", "Control return with slight rotation"], "cues": ["Drive elbow back past your side", "Slight torso rotation adds range", "Squeeze at the end"], "tips": ["Great for fixing back imbalances", "Better mind muscle connection than bilateral", "Can rotate for more lat stretch"], "youtube": "https://www.youtube.com/watch?v=CULzDVWyGVg"},
+  {"id": "dumbbell_shoulder_press", "name": "Dumbbell Shoulder Press", "category": "Push", "equipment": "Dumbbell", "primary": ["Shoulders"], "secondary": ["Triceps", "Upper Chest"], "steps": ["Sit or stand, dumbbells at shoulder height", "Press up until arms nearly straight", "Lower with control"], "cues": ["Don't lock out at top", "Keep core braced", "Don't let dumbbells drift forward"], "tips": ["Greater range of motion than barbell", "Each arm works independently \u2014 better for imbalances", "Can do seated for more stability"], "youtube": "https://www.youtube.com/watch?v=qEwKCR5JCog"},
+  {"id": "front_raise", "name": "Front Raise", "category": "Push", "equipment": "Dumbbell/Cable", "primary": ["Anterior Deltoid"], "secondary": ["Upper Chest", "Lateral Deltoid"], "steps": ["Hold dumbbells in front of thighs", "Raise arms straight in front to shoulder height", "Lower with control"], "cues": ["Don't swing or use momentum", "Control the lowering", "Slight bend in elbows"], "tips": ["Hits front delt \u2014 already worked heavily by pressing", "Don't overdo this if you press a lot", "Cable version provides better constant tension"], "youtube": "https://www.youtube.com/watch?v=hRJ6tR5-if0"},
+  {"id": "jefferson_curl", "name": "Jefferson Curl", "category": "Glutes", "equipment": "Barbell/Dumbbell", "primary": ["Hamstrings", "Spinal Erectors"], "secondary": ["Glutes", "Core"], "steps": ["Stand on box or step holding weight", "Slowly curl spine down vertebra by vertebra", "Reach weight toward floor", "Slowly uncurl back up"], "cues": ["This is INTENTIONAL spinal flexion \u2014 unusual", "Move very slowly and controlled", "Start with very light weight", "Should feel hamstring stretch throughout"], "tips": ["Controversial but effective for hamstring flexibility and strength", "Start extremely light \u2014 5-10kg", "Not for anyone with disc issues", "Improves posterior chain mobility significantly"], "youtube": "https://www.youtube.com/watch?v=2X7OE9e9QeQ"}];
 
 const MUSCLE_COLORS = {
   'Chest':'#ff6b35','Upper Chest':'#ff6b35','Lower Chest':'#ff8855',
@@ -4285,6 +4319,8 @@ function importAllData(){
 
     if(changed){save(d);console.log('Migration done!');}
   })();
+  // Ensure home renders properly on first load
+  requestAnimationFrame(()=>renderHome());
 })();
 </script>
 
