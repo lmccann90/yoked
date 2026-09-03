@@ -4292,9 +4292,10 @@ function importAllData(){
     document.getElementById('page-log').classList.add('active');
     document.querySelectorAll('.tab-btn')[1].classList.add('active');
     showToast('📋 Session restored!');
-    setTimeout(()=>{renderHome();renderLog();},0);
+    renderLog();
+    renderHome();
   } else {
-    setTimeout(()=>renderHome(),0);
+    renderHome();
   }
 
   // ── MIGRATION: update existing data without wiping it ──────────────────
@@ -4501,6 +4502,15 @@ function importAllData(){
 </div>
 
 <script>
+// Backup home render on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', ()=>{
+  const home = document.getElementById('page-home');
+  const beastsList = document.getElementById('beasts-list');
+  if(home && home.classList.contains('active') && beastsList && !beastsList.innerHTML.trim()){
+    renderHome();
+  }
+});
+
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
