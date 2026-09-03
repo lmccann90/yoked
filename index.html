@@ -817,6 +817,7 @@ function save(d){
 // NAVIGATION
 // ═══════════════════════════════════════════════
 function showTab(tab,btn,pushHistory=true){
+  localStorage.setItem('yoked_last_tab', tab);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+tab).classList.add('active');
