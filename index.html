@@ -918,14 +918,10 @@ function renderHome(){
       const nextLabel=next?`${next.icon} ${next.name}`:'—';
       const isOverride=!!u.nextDayOverride;
       return `<div class="beast-card" style="--beast-color:${u.color}">
-        <div onclick="goProgress('${u.id}')" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;">
-          <div style="font-size:28px;">${u.avatar||u.name[0]}</div>
-          <div>${drawStickFigureSmall(getUserLevel(getUserXP(load(),u.id)).level)}</div>
-        </div>
+        <div class="beast-avatar" onclick="goProgress('${u.id}')" style="cursor:pointer;font-size:32px;">${u.avatar||u.name[0]}</div>
         <div class="beast-info" onclick="goProgress('${u.id}')" style="cursor:pointer;">
           <div class="beast-name">${u.name}</div>
           <div class="beast-goal">${u.goal||'No goal set'}</div>
-          ${getXPBar(u.id)}
           <div class="beast-stats">
             <div><div class="beast-stat-val">${sessions.length}</div><div class="beast-stat-label">Sessions</div></div>
             <div><div class="beast-stat-val" style="color:#ff6b35">${streak}w</div><div class="beast-stat-label">Streak 🔥</div></div>
