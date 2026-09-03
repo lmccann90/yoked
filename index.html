@@ -863,6 +863,12 @@ function renderHome(){
   const d=load();
   const list=document.getElementById('beasts-list');
   if(!list){console.error('beasts-list not found');return;}
+  // Ensure activeUser is set
+  if(!activeUser){
+    const saved=localStorage.getItem('yoked_active_user');
+    if(saved&&d.users.find(u=>u.id===saved))activeUser=saved;
+    else if(d.users.length)activeUser=d.users[0].id;
+  }
   if(!d.users.length){
     list.innerHTML=`<div class="empty"><span class="empty-icon">💪</span><div class="empty-text">Add some beasts to get started</div></div>`;
   } else {
@@ -3883,6 +3889,23 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const beastsList = document.getElementById('beasts-list');
   if(home && home.classList.contains('active') && beastsList && !beastsList.innerHTML.trim()){
     renderHome();
+  }
+});
+
+// Save draft when app is backgrounded/swiped away
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'hidden'){
+    if(logDay && Object.keys(logExercises).length){
+      autosaveDraft();
+      console.log('Draft saved on visibility change');
+    }
+  }
+});
+
+// Also save on pagehide (more reliable on mobile)
+window.addEventListener('pagehide', ()=>{
+  if(logDay && Object.keys(logExercises).length){
+    autosaveDraft();
   }
 });
 
